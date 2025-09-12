@@ -1,0 +1,134 @@
+%Document details
+\documentclass[titlepage, table]{article}
+\title{Asset Allocation - Overview}    %Fag og opgave nr.
+\author{Anders Bang and Andreas Poulsen (fjr422, zmh741)}
+\date{\today}
+%Dato
+
+%Packages
+\usepackage[utf8]{inputenc}
+\usepackage[autostyle=true]{csquotes}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{bbm}
+\usepackage[danish, english]{babel}
+\usepackage{pdfpages}
+\usepackage{graphicx}
+\usepackage{wrapfig}
+\usepackage{dsfont}
+\usepackage{fancyhdr}
+\usepackage{mathtools}
+\usepackage{lastpage}
+\usepackage{hyperref} % Skal man kunne klikke på referencer?
+\usepackage{caption}
+\usepackage{lipsum}
+\usepackage{multirow}
+\usepackage[export]{adjustbox}
+\usepackage{physics}
+\usepackage{algpseudocode} %pseudocode
+\usepackage{algorithm}
+
+%Set up the page
+\usepackage[top=2.5 cm, bottom= 2.5 cm, textwidth=480 pt]{geometry}
+%\usepackage[a4paper, top=2.5, bottom=2.5]{geometry}
+ %\geometry{
+ %a4paper,
+ %total={170mm,257mm},
+ %left=20mm,
+ %top=20mm
+ %}
+ \linespread{1.15}
+
+\pagestyle{fancy}
+\fancypagestyle{plain}{}
+\fancyhf{}
+
+\renewcommand{\footrulewidth}{0.4pt} %Linje i bunden?
+
+%\setlength{\headheight}{30pt}  % Increase the header height
+%\setlength{\headsep}{25pt}  
+
+%Header and footer
+\rhead{\today}                      %Dato
+\chead{ Asset Allocation - Overview}                %Fag og nr.
+\lhead{fjr422, zmh741}                    %Forfatter
+\rfoot{Page \textbf{\thepage}}
+
+%Declaring commands
+%\DeclareMathSymbol{*}{\mathbin}{symbols}{"01}
+
+\newcommand{\indep}{\perp \!\!\! \perp} %Independent
+
+\newcommand{\N}{\mathbb{N}} %Natural numbers
+\newcommand{\E}{\mathbb{E}} %Expectation E
+\newcommand{\A}{\mathcal{A}} %Caligrafic A (Inf. Gen.)
+\newcommand{\G}{\mathcal{G}} 
+\newcommand{\F}{\mathcal{F}}
+\newcommand{\R}{\mathbb{R}} %Real numbers
+\newcommand{\C}{\mathbb{C}} %Complex numbers
+\renewcommand{\P}{\mathbb{P}} %Probability P
+\renewcommand{\L}{\mathcal{L}}
+\renewcommand{\E}[1]{\mathbb{E}\left[ #1 \right]} %Expectation
+\newcommand{\V}{\mathcal{V}}
+\newcommand{\Q}{\mathbb{Q}}
+\newcommand{\cov}[1]{\text{Cov}\left( #1 \right)} %covariance
+\renewcommand{\var}[1]{\text{Var}\left( #1 \right)} %Variance
+\newcommand{\inprod}[1]{\left\langle #1 \right\rangle} %Inner product
+\newcommand{\assim}{\overset{a.s.}{\sim}} %asymptotic similar
+\newcommand{\normal}[2]{\mathcal{N}\left( #1 , #2  \right)} %Normal Distribution
+\newcommand{\asto}{\overset{a.s.}{\to}} %Converge almost-surely
+\newcommand{\pto}{\overset{\mathbb{P}}{\to}} %Converge in Probability
+\newcommand{\dto}{\overset{d}{\to}} %Converge in distribution
+\newcommand{\T}{\top} %Transpose-sign
+\renewcommand{\norm}[1]{\left\lvert\left\lvert #1 \right\rvert \right\rvert}  %Norm
+\renewcommand{\abs}[1]{\left\lvert #1 \right\rvert} %Absoulute Value
+\newcommand{\set}[1]{\left\{ #1 \right\}} %For sets
+\newcommand{\ind}[1]{\mathds{1}_{\set{#1}}} %Indicator
+\newcommand{\EQC}[2]{\mathbb{E}^{\mathbb{Q}} \left[ #1 \mid #2\right]}
+\newcommand\numberthis{\addtocounter{equation}{1}\tag{\theequation}} %Adding to equation counter for general enviornment
+\newcommand{\pa}[1]{\left( #1 \right)}
+\DeclareMathOperator{\VaRa}{\text{VaR}_\alpha}
+%\setcounter{section}{0}         %Sets the numbering of sections.
+\setcounter{secnumdepth}{0} %Removes the numbers from the sections.
+\setlength{\parindent}{0pt}
+
+%For at kunne læse rmd output
+%\input{RMD_format.tex}
+
+\begin{document}
+\maketitle
+\newpage
+\tableofcontents
+\newpage
+
+\section{Week 1 - Markowitz model}
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{|c|c|}
+    \hline
+        \textbf{Pros} & \textbf{Cons} \\
+    \hline
+        sd & ds \\
+        \hline
+    \end{tabular}
+    \caption{Pros and cons of the Markowitz model}
+    \label{tab:Markowitz}
+\end{table}
+
+\section{Week 2 - Risk Parity and All Weather Portfolio}
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{|c|c|}
+    \hline
+        \textbf{Pros} & \textbf{Cons} \\
+    \hline
+        sd & ds \\
+        \hline
+    \end{tabular}
+    \caption{Pros and cons of the Risk Parity/All Weather Portfolio}
+    
+    \label{tab:AllWeather}
+\end{table}
+
+\end{document}
