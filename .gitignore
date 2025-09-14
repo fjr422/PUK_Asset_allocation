@@ -8,3 +8,5 @@
 *.fls
 **/*.fdb_latexmk
 *.fdb_latexmk
+*.fdb_latexmk
+*.pdf
