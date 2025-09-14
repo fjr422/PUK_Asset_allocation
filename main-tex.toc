@@ -1,0 +1,3 @@
+\babel@toc {english}{}\relax 
+\contentsline {section}{Week 1 - Markowitz model}{2}{section*.2}%
+\contentsline {section}{Week 2 - Risk Parity and All Weather Portfolio}{2}{section*.4}%
