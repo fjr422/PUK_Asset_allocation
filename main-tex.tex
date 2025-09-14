@@ -116,6 +116,40 @@
 \end{table}
 
 \section{Week 2 - Risk Parity and All Weather Portfolio}
+\textbf{Summary:} The goal of risk parity is to balance the amount of risk in one's portfolio rather than the capital (\$ amount) invested into each asset (class).
+Consequently this requires using a measure for risk. This could be volatility or any other risk measure for instance one that doesn't penalize gains as much as losses. Possibly leading to a more desirable asset allocation and better aligned with utility theory.
+There can be multiple implementations of a risk parity strategy depending on how one chooses to quantify risk. An advantage of attempting to balance to risk is that by using 'less correlated' assets no single asset class dominates losses and gains. This means that a risk parity strategy attempts to be robust towards things not going as expected.
+If succesful this reduces the impact of wrongfull expectations stemming either from prior anticipations and estimation in for instance a Markowitz model.
+
+One implementation is the Allweather Strategy by employed by Bridgewater Associates. The idea behind the Allweather Strategy is to employ a strategy that balances risk in different economic scenarios (see \ref{tab:AllWeather_quad}).
+As such the strategy should perform decently in any economical enviornment with the possibility that it underperforms compared to strategies targeting a specific assumption about the economic enviornment. However, when things don't go as expected an Allweather approach should perform vastly better. If the losses incurred are sufficiently large an Allweather approach can in the long run perform better.\newline
+
+Commonly the Allweather Strategy relates to so called $\beta$ which are asset classes and their excess return over the risk free interest. This through the following decomposition:
+\begin{align*}
+    \text{return} = \text{return}_{\text{cash (Risk-free)}} + \beta + \alpha,
+\end{align*}
+where $\alpha$ is excess return due to investment manager skill. Noice this is a zero sum game in frictionless market. To see this deviating from the optimal means one must be long and another short in that position. Thus the expected value of the bet being 0.
+
+A caveat is that usually it is assumed that lower risk asset classes yields lower returns than risky asset classes. This is problematic if one attempts to employ a Risk Parity strategy as this requires balancing risk but only some asset classes yield sufficient returns on their own. To mitigate this problem risk parity strategies commonly use leverage to achieve similar returns per asset class.
+Using volatility as risk measure this can in part be seen as reasonable as all asset classes have roughly similar Sharpe ratios.
+To employ the leverage it requires borrowing to invest more into an asset class. This increases the exposure for that asset class (the bet on it performing). In worst consequence one can lose all capital and still have the debt. Hence it is fundamental to have balanced the bets.
+
+In a realistic model leveraging will be associated with buying large quantities possibly leading to higher transaction costs. Secondly and more consequential the borrowing rate is higher than the risk-free return rate. Thus in order to achieve the exposure to the bet financed by leverage becomes larger as the excess return is smaller.
+\begin{table}[h]
+    \centering
+    \begin{tabular}{c|c|c|}
+        \textbf{Growth} & \textbf{Inflation} \\
+    \hline
+        Rising & & \\
+    \hline
+        Falling & &
+    \hline
+    \end{tabular}
+    \caption{Quadrants Allweather Strategy}
+    
+    \label{tab:AllWeather_quad}
+\end{table}
+
 
 \begin{table}[h]
     \centering
