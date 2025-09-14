@@ -4,3 +4,7 @@
 *.aux
 **/*.synctex.gz
 *.synctex.gz
+**/*.fls
+*.fls
+**/*.fdb_latexmk
+*.fdb_latexmk
