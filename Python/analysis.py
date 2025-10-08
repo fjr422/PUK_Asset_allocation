@@ -1,5 +1,6 @@
 import polars as pl
-import DataPaths
+import plotly.express as px
+import data_paths
 
 farma_french_paths = DataPaths.FarmaFrench()
 
