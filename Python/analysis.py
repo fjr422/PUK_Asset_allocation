@@ -12,7 +12,8 @@ farma_french_paths = data.FarmaFrench()
 farma_french_input = data.FarmaFrenchInput(farma_french_paths)
 
 # plot
-american_return_plot = px.scatter(farma_french_input.american6, x ="DateID", y ="weighted_return", color="Portfolio")
-european_return_plot = px.scatter(farma_french_input.european6, x ="DateID", y ="weighted_return", color="Portfolio")
+px.scatter(farma_french_input.farma_french_portfolios, x ="DateID", y ="weighted_return",
+           color="Portfolio", facet_col="Market", facet_row="Portfolio size",
+           opacity=0.5).update_traces(marker_size = 5).show()
+
 s = 1
-print(farma_french_input.american6.head())
