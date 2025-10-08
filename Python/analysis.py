@@ -2,16 +2,9 @@ import polars as pl
 import plotly.express as px
 import data_paths
 
-farma_french_paths = DataPaths.FarmaFrench()
+# Path
+farma_french_paths = data_paths.FarmaFrench()
 
-ff_research_factors = pl.read_csv(farma_french_paths.ff_research_factors, has_header=True, schema={
-    "DateId": pl.String,
-    "Mkt_RF": pl.Float64,
-    "SMB": pl.Float64,
-    "HML": pl.Float64,
-    "RF": pl.Float64
-})
-print(ff_research_factors.head())
-first = ff_research_factors.with_columns((pl.col("Mkt_RF") + pl.col("SMB") + pl.col("HML")).alias("Test"))
-print(first.head())
-t = 1
+# Input
+ff_research_factors = pl.read_csv(farma_french_paths.ff_research_factors_path, has_header=True, schema={"DateID": pl.String, "Mkt_RF": pl.Float64, "SMB": pl.Float64, "HML": pl.Float64, "RF": pl.Float64})
+american_6_value_weighted_returns = pl.read_csv(farma_french_paths.american_6_value_weighted_returns_path, has_header=True, null_values=["-999", "-99.99"], schema={"DateID":pl.String, "SMALL LoPRIOR": pl.Float64, "ME1 PRIOR2": pl.Float64, "SMALL HiPRIOR": pl.Float64, "BIG LoPRIOR": pl.Float64 , "ME2 PRIOR2": pl.Float64, "BIG HiPRIOR": pl.Float64} )
