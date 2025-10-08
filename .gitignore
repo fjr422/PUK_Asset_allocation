@@ -10,5 +10,3 @@
 *.fdb_latexmk
 *.fdb_latexmk
 *.pdf
-**/*.csv
-*.csv
