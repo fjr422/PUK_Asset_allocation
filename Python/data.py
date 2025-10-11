@@ -1,3 +1,4 @@
+import math
 import os
 import polars as pl
 import polars.selectors as cs
@@ -27,6 +28,11 @@ class FarmaFrench:
     european25_value_weighted_returns_path = os.path.join("Data", __european25, "AverageValueWeightedReturns_Monthly.csv")
     european25_number_firms_path = os.path.join("Data", __european25, "NumberFirmsInPortfolios.csv")
     european25_size_firms_path = os.path.join("Data", __european25, "AverageValueWeightedReturns_Monthly.csv")
+
+class YieldCurvePaths:
+    zero_cupon_europe = os.path.join("Data", "zero_cupon_europe.csv")
+    zero_cupon_europe_params = os.path.join("Data", "zero_cupon_europe_params.csv")
+
 
 class FarmaFrenchInput:
     def __init__(self, farma_french_paths):
@@ -62,4 +68,26 @@ class FarmaFrenchInput:
 
         self.farma_french_portfolios = pl.concat([__american6, __european6, __american25, __european25])
 
+class YieldCurveInput:
+    def risk_free_rate(self, time_to_maturity):
+        return self.yield_curve_params.with_columns(
+            # Calculate each term of the Svensson model
+            (pl.col("BETA0")
+             + pl.col("BETA1") * ((1 - (-time_to_maturity / pl.col("TAU1")).exp()) / (time_to_maturity / pl.col("TAU1"))))
+            .alias("Term1")
+        ).with_columns(
+            (pl.col("BETA2") * ((1 - (-time_to_maturity / pl.col("TAU1")).exp()) / (time_to_maturity / pl.col("TAU1")))
+             - pl.col("BETA2") * (-time_to_maturity / pl.col("TAU1")).exp()).alias("Term2")
+        ).with_columns(
+            (pl.col("BETA3") * ((1 - (-time_to_maturity / pl.col("TAU2")).exp()) / (time_to_maturity / pl.col("TAU2")))
+             - pl.col("BETA3") * (-time_to_maturity / pl.col("TAU2")).exp()).alias("Term3")
+        ).with_columns(
+            (pl.col("Term1") + pl.col("Term2") + pl.col("Term3")).alias("SpotRate")
+        ).with_columns( (pl.col("SpotRate").exp() - 1).alias("RF")
+        ).select(pl.exclude(["Term1", "Term2", "Term3"]))
 
+    def __init__(self, yield_curve_path):
+        __yield_curve_params = ["BETA0", "BETA1", "BETA2", "BETA3", "TAU1", "TAU2"]
+        __yield_curve_full = pl.read_csv(yield_curve_path, has_header=True, columns=["DATA_TYPE_FM", "TIME_PERIOD", "OBS_VALUE"], try_parse_dates=True)
+        __yield_curve_pivot = __yield_curve_full.filter(pl.col("DATA_TYPE_FM").is_in(__yield_curve_params)).pivot("DATA_TYPE_FM", index = "TIME_PERIOD", values = "OBS_VALUE")
+        self.yield_curve_params = __yield_curve_pivot.with_columns()
