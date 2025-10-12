@@ -13,3 +13,4 @@
 **/*.pyc
 *.pyc
 Data/zero_cupon_europe.csv
+/Python/__pycache__/data.cpython-313.pyc
