@@ -1,7 +1,7 @@
 import os
 import polars as pl
 import polars.selectors as cs
-class FarmaFrench:
+class FarmaFrenchPaths:
     ff_research_factors_path = os.path.join("Data", "F-F_Research_Data_Factors.csv")
 
     # American6

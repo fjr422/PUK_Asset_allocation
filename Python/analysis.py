@@ -6,11 +6,13 @@ import data
 
 
 # Path
-farma_french_paths = data.FarmaFrench()
+farma_french_paths = data.FarmaFrenchPaths()
 
 # Input
 farma_french_input = data.FarmaFrenchInput(farma_french_paths)
 
+pivot = farma_french_input.farma_french_portfolios.select(pl.exclude(["number_firms", "size"])).pivot("Portfolio", index = ["DateID", "Market", "Portfolio size"], values = "weighted_return").with_columns((pl.col("DateID") + "01").str.to_date("%Y%m%d").alias("DateID")).sort("DateID").with_row_index()
+test = pivot.rolling(index_column = "index", period="30i").agg([pl.cov("SMALL LoPRIOR", 'ME1 PRIOR2')])
 # plot
 px.scatter(farma_french_input.farma_french_portfolios, x = "DateID", y = "weighted_return",
            color="Portfolio", facet_col="Market", facet_row="Portfolio size",
