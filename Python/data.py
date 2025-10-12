@@ -112,17 +112,19 @@ class YieldCurveInput:
                                                             ).filter(pl.col("TIME_PERIOD") == pl.col("TIME_PERIOD").max().over((pl.col("TIME_PERIOD").dt.year(), pl.col("TIME_PERIOD").dt.month()))
                                                             ).with_columns(pl.col("TIME_PERIOD").dt.month_end().alias("TIME_PERIOD"))
 
-    def risk_free_rate(self, max_time_to_maturity, step_size):
-        """Calculate spot rate for time to maturity"""
-        time_range = np.arange(step_size, max_time_to_maturity, step_size)
+    def risk_free_rate(self, max_time_to_maturity):
+        """Calculate spot rate for time to maturity in years."""
+        months = max_time_to_maturity * 12
+        time_range = range(1, months + 1)
+
         return self.yield_curve_params.with_columns(
             # Calculate each term of the Svensson model
             (pl.col("BETA0")
-             + pl.col("BETA1") * ((1 - (-time_to_maturity / pl.col("TAU1")).exp()) / (time_to_maturity / pl.col("TAU1")))
-            + pl.col("BETA2") * ((1 - (-time_to_maturity / pl.col("TAU1")).exp()) / (time_to_maturity / pl.col("TAU1")))
-             - pl.col("BETA2") * (-time_to_maturity / pl.col("TAU1")).exp()
-            + pl.col("BETA3") * ((1 - (-time_to_maturity / pl.col("TAU2")).exp()) / (time_to_maturity / pl.col("TAU2")))
-             - pl.col("BETA3") * (-time_to_maturity / pl.col("TAU2")).exp()).alias(str(time_to_maturity))
+             + pl.col("BETA1") * ((1 - (-(time_to_maturity / 12) / pl.col("TAU1")).exp()) / ((time_to_maturity / 12) / pl.col("TAU1")))
+            + pl.col("BETA2") * ((1 - (-(time_to_maturity / 12) / pl.col("TAU1")).exp()) / ((time_to_maturity / 12) / pl.col("TAU1")))
+             - pl.col("BETA2") * (-(time_to_maturity / 12) / pl.col("TAU1")).exp()
+            + pl.col("BETA3") * ((1 - (-time_to_maturity / 12 / pl.col("TAU2")).exp()) / ((time_to_maturity / 12) / pl.col("TAU2")))
+             - pl.col("BETA3") * (-(time_to_maturity / 12) / pl.col("TAU2")).exp()).alias(str(time_to_maturity))
             for time_to_maturity in time_range
         ).unpivot(index = ["TIME_PERIOD", "BETA0", "BETA1", "BETA2", "BETA3", "TAU1", "TAU2"], variable_name = "TIME_TO_MATURITY", value_name = "SPOTRATE"
                   ).cast({"TIME_TO_MATURITY": pl.Float64})
