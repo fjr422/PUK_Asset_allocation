@@ -14,7 +14,7 @@ exchange_rates = data.ExchangeRates(exchange_rate_paths)
 # Creating spot rates
 spot_rates = yield_curve_current.risk_free_rate(10)
 # RF_eur
-RF_EUR = spot_rates.filter(pl.col("TIME_TO_MATURITY") == 1 / 12
+RF_EUR = spot_rates.filter(pl.col("TIME_TO_MATURITY") == 1
                         ).with_columns(RF = (pl.col("SPOTRATE") * 1/12).exp() - 1
                         ).select("TIME_PERIOD", "RF"
                         ).rename({"RF": "RF_EUR"})

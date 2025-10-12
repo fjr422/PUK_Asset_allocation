@@ -127,7 +127,7 @@ class YieldCurveInput:
              - pl.col("BETA3") * (-(time_to_maturity / 12) / pl.col("TAU2")).exp()).alias(str(time_to_maturity))
             for time_to_maturity in time_range
         ).unpivot(index = ["TIME_PERIOD", "BETA0", "BETA1", "BETA2", "BETA3", "TAU1", "TAU2"], variable_name = "TIME_TO_MATURITY", value_name = "SPOTRATE"
-                  ).cast({"TIME_TO_MATURITY": pl.Float64})
+                  ).cast({"TIME_TO_MATURITY": pl.Int64})
 
 class ExchangeRates:
     def __init__(self, exchange_rate_paths: ExchangeRatePaths):
