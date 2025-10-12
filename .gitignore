@@ -12,4 +12,4 @@
 *.pdf
 **/*.pyc
 *.pyc
-Python/Data/zero_cupon_europe.csv
+Data/zero_cupon_europe.csv

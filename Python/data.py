@@ -2,48 +2,49 @@ import os
 import polars as pl
 import polars.selectors as cs
 import numpy as np
+data_path = os.path.join(os.path.dirname( __file__ ), os.path.pardir, "Data")
 class FamaFrenchPaths:
-    ff_research_factors_path = os.path.join("Data", "F-F_Research_Data_Factors.csv")
+    ff_research_factors_path = os.path.join(data_path, "F-F_Research_Data_Factors.csv")
 
     # American6
     __american6 = "US_6PF_Size_MOM"
-    american6_value_weighted_returns_path = os.path.join("Data", __american6, "AverageValueWeightedReturns_Monthly.csv")
-    american6_N_firms_path = os.path.join("Data", __american6, "NumberFirmsInPortfolios.csv")
-    american6_Avg_FirmSize_firms_path = os.path.join("Data", __american6, "AverageFirmSize.csv")
+    american6_value_weighted_returns_path = os.path.join(data_path, __american6, "AverageValueWeightedReturns_Monthly.csv")
+    american6_N_firms_path = os.path.join(data_path, __american6, "NumberFirmsInPortfolios.csv")
+    american6_Avg_FirmSize_firms_path = os.path.join(data_path, __american6, "AverageFirmSize.csv")
 
     # European 6
     __european6 = "EU_6PF_Size_MOM"
-    european6_value_weighted_returns_path = os.path.join("Data", __european6, "AverageValueWeightedReturns_Monthly.csv")
-    european6_N_firms_path = os.path.join("Data", __european6, "NumberFirmsInPortfolios.csv")
-    european6_Avg_FirmSize_firms_path = os.path.join("Data", __european6, "AverageFirmSize.csv")
+    european6_value_weighted_returns_path = os.path.join(data_path, __european6, "AverageValueWeightedReturns_Monthly.csv")
+    european6_N_firms_path = os.path.join(data_path, __european6, "NumberFirmsInPortfolios.csv")
+    european6_Avg_FirmSize_firms_path = os.path.join(data_path, __european6, "AverageFirmSize.csv")
 
     # American25
     __american25 = "US_25PF_Size_MOM"
-    american25_value_weighted_returns_path = os.path.join("Data", __american25, "AverageValueWeightedReturns_Monthly.csv")
-    american25_N_firms_path = os.path.join("Data", __american25, "NumberFirmsInPortfolios.csv")
-    american25_Avg_FirmSize_firms_path = os.path.join("Data", __american25, "AverageFirmSize.csv")
+    american25_value_weighted_returns_path = os.path.join(data_path, __american25, "AverageValueWeightedReturns_Monthly.csv")
+    american25_N_firms_path = os.path.join(data_path, __american25, "NumberFirmsInPortfolios.csv")
+    american25_Avg_FirmSize_firms_path = os.path.join(data_path, __american25, "AverageFirmSize.csv")
 
     # European 25
     __european25 = "EU_25PF_Size_MOM"
-    european25_value_weighted_returns_path = os.path.join("Data", __european25, "AverageValueWeightedReturns_Monthly.csv")
-    european25_N_firms_path = os.path.join("Data", __european25, "NumberFirmsInPortfolios.csv")
-    european25_Avg_FirmSize_firms_path = os.path.join("Data", __european25, "AverageFirmSize.csv")
+    european25_value_weighted_returns_path = os.path.join(data_path, __european25, "AverageValueWeightedReturns_Monthly.csv")
+    european25_N_firms_path = os.path.join(data_path, __european25, "NumberFirmsInPortfolios.csv")
+    european25_Avg_FirmSize_firms_path = os.path.join(data_path, __european25, "AverageFirmSize.csv")
     
     # Input
-    fama_french_portfolios_path = os.path.join("Data", "Input","fama_french_portfolios.csv")
-    fama_french_factors_path = os.path.join("Data", "Input", "fama_french_factors.csv")
+    fama_french_portfolios_path = os.path.join(data_path, "Input","fama_french_portfolios.csv")
+    fama_french_factors_path = os.path.join(data_path, "Input", "fama_french_factors.csv")
 
 class YieldCurvePaths:
-    zero_cupon_europe = os.path.join("Data", "zero_cupon_europe.csv")
+    zero_cupon_europe = os.path.join(data_path, "zero_cupon_europe.csv")
     # Input
-    zero_cupon_europe_params = os.path.join("Data", "Input", "zero_cupon_europe_params.csv")
-    spot_rates_path = os.path.join("Data", "Input", "spot_rates.csv")
+    zero_cupon_europe_params = os.path.join(data_path, "Input", "zero_cupon_europe_params.csv")
+    spot_rates_path = os.path.join(data_path, "Input", "spot_rates.csv")
 
 class ExchangeRatePaths:
-    all_exchange_rates_path = os.path.join("Data", "eurofxref-hist.csv" )
+    all_exchange_rates_path = os.path.join(data_path, "eurofxref-hist.csv" )
 
     # Input
-    usd_exchange_rate_path = os.path.join("Data", "Input", "USD_exchange_rate.csv" )
+    usd_exchange_rate_path = os.path.join(data_path, "Input", "USD_exchange_rate.csv" )
 
 class FamaFrenchInput:
     def __init__(self, fama_french_paths):
