@@ -10,3 +10,5 @@
 *.fdb_latexmk
 *.fdb_latexmk
 *.pdf
+**/*.pyc
+Python/Data/zero_cupon_europe.csv
