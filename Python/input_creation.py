@@ -21,7 +21,8 @@ RF_EUR = spot_rates.filter(pl.col("TIME_TO_MATURITY") == 1
 
 # Eur conversion
 fama_french_portfolios_eur = fama_french_input.fama_french_portfolios.join(exchange_rates.usd_exchange_rates, on = "TIME_PERIOD", how = "left"
-                                                ).with_columns(Return_EUR = (pl.col("Return") + 100) * pl.col("Monthly_Exchange_Return") - 100)
+                                                ).with_columns(Return_EUR = (pl.col("Return") + 100) * pl.col("Monthly_Exchange_Return") - 100
+                                                ).with_columns(Market_return_EUR = (pl.col("Market_return") + 100) * pl.col("Monthly_Exchange_Return") - 100)
 
 fama_french_factors_USD = fama_french_portfolios_eur.filter(pl.col("N_Portfolios") == "6"
                                     ).select(["Portfolio", "TIME_PERIOD", "Return", "Region"]
