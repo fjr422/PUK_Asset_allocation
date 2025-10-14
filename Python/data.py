@@ -136,4 +136,6 @@ class ExchangeRates:
                                               ).filter(pl.col("TIME_PERIOD") == pl.col("TIME_PERIOD").max().over((pl.col("TIME_PERIOD").dt.year(), pl.col("TIME_PERIOD").dt.month()))
                                               ).with_columns((pl.col("TIME_PERIOD").dt.month_end()).alias("TIME_PERIOD")
                                               ).with_columns((1 / pl.col("USD") ).alias("USD_to_EUR")
-                                              ).with_columns(Monthly_Exchange_Return = pl.col("USD_to_EUR") / (pl.col("USD_to_EUR").shift(1)))
+                                              ).sort(pl.col("TIME_PERIOD"), descending=False
+                                              ).with_columns(Prev_USD_to_EUR = pl.col("USD_to_EUR").shift(1)
+                                              ).with_columns(Monthly_Exchange_Return = pl.col("USD_to_EUR") / pl.col("Prev_USD_to_EUR"))
