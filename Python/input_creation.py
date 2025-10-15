@@ -24,27 +24,66 @@ fama_french_portfolios_eur = fama_french_input.fama_french_portfolios.join(excha
                                                 ).with_columns(Return_EUR = (pl.col("Return") + 100) * pl.col("Monthly_Exchange_Return") - 100
                                                 ).with_columns(Market_return_EUR = (pl.col("Market_return") + 100) * pl.col("Monthly_Exchange_Return") - 100)
 
-fama_french_factors_USD = fama_french_portfolios_eur.filter(pl.col("N_Portfolios") == "6"
-                                    ).select(["Portfolio", "TIME_PERIOD", "Return", "Region"]
-                                    ).pivot("Portfolio", index = ["TIME_PERIOD", "Region"], values = "Return"
-                                    ).with_columns(SMB_USD = 1 / 3 * (pl.col("SMALL LoPRIOR") + pl.col("ME1 PRIOR2") + pl.col("SMALL HiPRIOR"))
-                                                   - 1 / 3 * (pl.col("BIG LoPRIOR") + pl.col("ME2 PRIOR2") + pl.col("BIG HiPRIOR"))
-                                    ). with_columns(MOM_USD = 1 / 2 * (pl.col("SMALL HiPRIOR") + pl.col("BIG HiPRIOR"))
-                                                    - 1 / 2 * (pl.col("SMALL LoPRIOR") + pl.col("BIG LoPRIOR"))
-                                    ).join(fama_french_input.ff_research_factors, on = "TIME_PERIOD", how = "left"
-                                    ).select(["TIME_PERIOD", "Region", "SMB_USD", "MOM_USD", "RF"]
-                                    ).rename({"RF": "RF_USD"})
+# Calculating factors
+small_cap_portfolios = ("SMALL LoPRIOR", "ME1 PRIOR2", "SMALL HiPRIOR")
+big_cap_portfolios = ("BIG LoPRIOR", "ME2 PRIOR2", "BIG HiPRIOR")
+HiMOM = ("SMALL HiPRIOR", "BIG HiPRIOR")
+LowMOM = ("SMALL LoPRIOR", "BIG LoPRIOR")
 
-fama_french_factors_EUR = fama_french_portfolios_eur.filter(pl.col("N_Portfolios") == "6"
-                                    ).select(["Portfolio", "TIME_PERIOD", "Return_EUR", "Region"]
-                                    ).pivot("Portfolio", index = ["TIME_PERIOD", "Region"], values = "Return_EUR"
-                                    ).with_columns(SMB_EUR = 1 / 3 * (pl.col("SMALL LoPRIOR") + pl.col("ME1 PRIOR2") + pl.col("SMALL HiPRIOR"))
-                                                   - 1 / 3 * (pl.col("BIG LoPRIOR") + pl.col("ME2 PRIOR2") + pl.col("BIG HiPRIOR"))
-                                    ). with_columns(MOM_EUR = 1 / 2 * (pl.col("SMALL HiPRIOR") + pl.col("BIG HiPRIOR"))
-                                                    - 1 / 2 * (pl.col("SMALL LoPRIOR") + pl.col("BIG LoPRIOR"))
-                                    ).join(RF_EUR, on = "TIME_PERIOD", how = "left"
-                                    ).select(["TIME_PERIOD", "Region", "SMB_EUR", "MOM_EUR", "RF_EUR"]
-                                    )
+tech_stocks = "BIG HiPRIOR"
+small_cap = ("SMALL LoPRIOR", "ME1 PRIOR2", "SMALL HiPRIOR")
+
+## In USD
+def fama_french_factors(portfolios: pl.DataFrame, return_col: str, currency: str, n_portfolios = "6", small_cap_port = small_cap_portfolios, big_cap_port = big_cap_portfolios, low_mom = LowMOM, high_mom = HiMOM, tech = tech_stocks, small_cap_stocks = small_cap):
+    """Calculating Fama & French factors"""
+    factors_base = portfolios.filter(pl.col("N_Portfolios") == n_portfolios
+                                    ).select(["Portfolio", "TIME_PERIOD", return_col, "Region"]
+                                    ).pivot("Portfolio", index = ["TIME_PERIOD", "Region"], values = return_col
+                                    ).with_columns((1 / 3 * (pl.col(small_cap_port[0]) + pl.col(small_cap_port[1]) + pl.col(small_cap_port[2]))
+                                                   - 1 / 3 * (pl.col(big_cap_port[0]) + pl.col(big_cap_port[1]) + pl.col(big_cap_port[2]))).alias("SMB_" + currency)
+                                    ).with_columns((1 / 2 * (pl.col(high_mom[0]) + pl.col(high_mom[1]))
+                                                    - 1 / 2 * (pl.col(low_mom[0]) + pl.col(low_mom[1]))).alias("MOM_" + currency)
+                                    ).with_columns((pl.col(tech)).alias("Tech Stocks " + currency)
+                                    ).join(fama_french_input.ff_research_factors, on = "TIME_PERIOD", how = "left"
+                                    ).select(["TIME_PERIOD", "Region", "SMB_" + currency, "MOM_" + currency, "RF", "Tech Stocks " + currency]
+                                    ).rename({"RF": "RF_" + currency})
+
+    small_cap_factor = portfolios.filter((pl.col("N_Portfolios") == n_portfolios) & (pl.col("Portfolio").is_in(small_cap_stocks))
+                                    ).select(["Portfolio", "TIME_PERIOD", return_col, "Region", "Portfolio_market_size"]
+                                    ).with_columns((pl.col("Portfolio_market_size") / pl.col("Portfolio_market_size").sum().over(("TIME_PERIOD", "Region"),)).alias("Market weight")
+                                    ).group_by(["TIME_PERIOD", "Region"]
+                                    ).agg((pl.col(return_col) * pl.col("Market weight")).sum().alias("Small Cap " + currency))
+
+    return factors_base.join(small_cap_factor, on = ("TIME_PERIOD", "Region"), how = "left")
+
+fama_french_factors_USD = fama_french_factors(fama_french_portfolios_eur, return_col="Return", currency = "USD")
+fama_french_factors_EUR = fama_french_factors(fama_french_portfolios_eur, return_col="Return_EUR", currency = "EUR")
+# fama_french_portfolios_eur.filter(pl.col("N_Portfolios") == "6"
+#                                     ).select(["Portfolio", "TIME_PERIOD", "Return", "Region"]
+#                                     ).pivot("Portfolio", index = ["TIME_PERIOD", "Region"], values = "Return"
+#                                     ).with_columns(SMB_USD = 1 / 3 * (pl.col("SMALL LoPRIOR") + pl.col("ME1 PRIOR2") + pl.col("SMALL HiPRIOR"))
+#                                                    - 1 / 3 * (pl.col("BIG LoPRIOR") + pl.col("ME2 PRIOR2") + pl.col("BIG HiPRIOR"))
+#                                     ).with_columns(MOM_USD = 1 / 2 * (pl.col("SMALL HiPRIOR") + pl.col("BIG HiPRIOR"))
+#                                                     - 1 / 2 * (pl.col("SMALL LoPRIOR") + pl.col("BIG LoPRIOR"))
+#                                     ).with_columns((pl.col(tech_stocks)).alias("Tech Stocks USD")
+#                                     ).join(fama_french_input.ff_research_factors, on = "TIME_PERIOD", how = "left"
+#                                     ).select(["TIME_PERIOD", "Region", "SMB_USD", "MOM_USD", "RF", "Tech Stocks USD"]
+#                                     ).rename({"RF": "RF_USD"})
+## In EUR
+# fama_french_factors_EUR = fama_french_portfolios_eur.filter(pl.col("N_Portfolios") == "6"
+#                                     ).select(["Portfolio", "TIME_PERIOD", "Return_EUR", "Region"]
+#                                     ).pivot("Portfolio", index = ["TIME_PERIOD", "Region"], values = "Return_EUR"
+#                                     ).with_columns(SMB_EUR = 1 / 3 * (pl.col("SMALL LoPRIOR") + pl.col("ME1 PRIOR2") + pl.col("SMALL HiPRIOR"))
+#                                                    - 1 / 3 * (pl.col("BIG LoPRIOR") + pl.col("ME2 PRIOR2") + pl.col("BIG HiPRIOR"))
+#                                     ).with_columns(MOM_EUR = 1 / 2 * (pl.col("SMALL HiPRIOR") + pl.col("BIG HiPRIOR"))
+#                                                     - 1 / 2 * (pl.col("SMALL LoPRIOR") + pl.col("BIG LoPRIOR"))
+#                                     ).with_columns((pl.col("BIG HiPRIOR")).alias("Tech Stocks EUR")
+#                                     ).join(RF_EUR, on = "TIME_PERIOD", how = "left"
+#                                     ).select(["TIME_PERIOD", "Region", "SMB_EUR", "MOM_EUR", "RF_EUR"]
+#                                     )
+
+
+
 
 fama_french_portfolios = fama_french_portfolios_eur.join(fama_french_factors_USD, on = ["TIME_PERIOD", "Region"], how = "left"
                                                 ).join(fama_french_factors_EUR, on = ["TIME_PERIOD", "Region"], how = "left"
