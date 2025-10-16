@@ -102,7 +102,7 @@ class FamaFrenchInput:
                                                 ).with_columns(pl.col("TIME_PERIOD").dt.month_end().alias("TIME_PERIOD")
                                                 ).filter(pl.col("TIME_PERIOD") >= pl.date(year=2004, month = 8, day = 30)
                                                 ).rename({"weighted_return": "Return"}
-                                                ).sort(["N_Portfolios","TIME_PERIOD", "Portfolio"])
+                                                ).sort(["TIME_PERIOD","N_Portfolios", "Region", "Portfolio"])
 
 class YieldCurveInput:
     def __init__(self, yield_curve_path):
@@ -116,7 +116,8 @@ class YieldCurveInput:
                                                             ).group_by((pl.col("TIME_PERIOD").dt.year().alias("Year"), pl.col("TIME_PERIOD").dt.month().alias("Month"))
                                                             ).tail(n = 1
                                                             ).with_columns(pl.col("TIME_PERIOD").dt.month_end().alias("TIME_PERIOD")
-                                                            ).select(pl.exclude(["Year", "Month"]))
+                                                            ).select(pl.exclude(["Year", "Month"])
+                                                            ).sort("TIME_PERIOD", descending=False)
 
     def risk_free_rate(self, max_time_to_maturity):
         """Calculate spot rate for time to maturity in years."""
@@ -133,7 +134,8 @@ class YieldCurveInput:
              - pl.col("BETA3") * (-(time_to_maturity / 12) / pl.col("TAU2")).exp()).alias(str(time_to_maturity))
             for time_to_maturity in time_range
         ).unpivot(index = ["TIME_PERIOD", "BETA0", "BETA1", "BETA2", "BETA3", "TAU1", "TAU2"], variable_name = "TIME_TO_MATURITY", value_name = "SPOTRATE"
-                  ).cast({"TIME_TO_MATURITY": pl.Int64})
+                  ).cast({"TIME_TO_MATURITY": pl.Int64}
+                  ).sort("TIME_PERIOD", descending=False)
 
 class ExchangeRates:
     def __init__(self, exchange_rate_paths: ExchangeRatePaths):
@@ -147,4 +149,5 @@ class ExchangeRates:
                                               ).sort(pl.col("TIME_PERIOD"), descending=False
                                               ).with_columns(Prev_USD_to_EUR = pl.col("USD_to_EUR").shift(1)
                                               ).with_columns(Monthly_Exchange_Return = pl.col("USD_to_EUR") / pl.col("Prev_USD_to_EUR")
-                                              ).select(pl.exclude(["Year", "Month"]))
+                                              ).select(pl.exclude(["Year", "Month"])
+                                              ).sort("TIME_PERIOD", descending=False)
