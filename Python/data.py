@@ -59,9 +59,6 @@ class FamaFrenchInput:
         __american6_number = pl.read_csv(fama_french_paths.american6_N_firms_path, has_header=True, null_values=["-999", "-99.99"], schema_overrides={"DateID":pl.String}).unpivot(cs.numeric(), index="DateID", variable_name="Portfolio", value_name="N_firms")
         __american6 = __american6_value_weighted_returns.join(__american6_Avg_FirmSize, how = "full", on=["DateID", "Portfolio"], coalesce=True).join(__american6_number, how = "full", on=["DateID", "Portfolio"], coalesce=True)
         __american6 = __american6.with_columns(pl.lit("US").alias("Region"), pl.lit("6").alias("N_Portfolios")
-                                            ).with_columns(Portfolio_market_size = pl.col("N_firms") * pl.col("Avg_FirmSize")
-                                            ).with_columns(Portfolio_return_cap = pl.col("weighted_return") * pl.col("Portfolio_market_size") / pl.col("Portfolio_market_size").sum().over("DateID")
-                                            ).with_columns(Market_return = pl.col("Portfolio_return_cap").sum().over("DateID")
                                             )
 
         # European 6
@@ -70,9 +67,6 @@ class FamaFrenchInput:
         __european6_number = pl.read_csv(fama_french_paths.european6_N_firms_path, has_header=True, null_values=["-999", "-99.99"], schema_overrides={"DateID":pl.String}).unpivot(cs.numeric(), index="DateID", variable_name="Portfolio", value_name="N_firms")
         __european6 = __european6_value_weighted_returns.join(__european6_Avg_FirmSize, how = "full", on=["DateID", "Portfolio"], coalesce=True).join(__european6_number, how = "full", on=["DateID", "Portfolio"], coalesce=True)
         __european6 = __european6.with_columns(pl.lit("EU").alias("Region"), pl.lit("6").alias("N_Portfolios")
-                                        ).with_columns(Portfolio_market_size = pl.col("N_firms") * pl.col("Avg_FirmSize")
-                                        ).with_columns(Portfolio_return_cap = pl.col("weighted_return") * pl.col("Portfolio_market_size") / pl.col("Portfolio_market_size").sum().over("DateID")
-                                        ).with_columns(Market_return = pl.col("Portfolio_return_cap").sum().over("DateID")
                                         )
 
         # American 25
@@ -81,10 +75,7 @@ class FamaFrenchInput:
         __american25_number = pl.read_csv(fama_french_paths.american25_N_firms_path, has_header=True, null_values=["-999", "-99.99"], schema_overrides={"DateID":pl.String}).unpivot(cs.numeric(), index="DateID", variable_name="Portfolio", value_name="N_firms")
         __american25 = __american25_value_weighted_returns.join(__american25_Avg_FirmSize, how = "full", on=["DateID", "Portfolio"], coalesce=True).join(__american25_number, how = "full", on=["DateID", "Portfolio"], coalesce=True)
         __american25 = __american25.with_columns(pl.lit("US").alias("Region"), pl.lit("25").alias("N_Portfolios")
-                                        ).with_columns(Portfolio_market_size = pl.col("N_firms") * pl.col("Avg_FirmSize")
-                                        ).with_columns(Portfolio_return_cap = pl.col("weighted_return") * pl.col("Portfolio_market_size") / pl.col("Portfolio_market_size").sum().over("DateID")
-                                        ).with_columns(Market_return = pl.col("Portfolio_return_cap").sum().over("DateID")
-                                        )
+                                       )
 
         # European 25
         __european25_value_weighted_returns = pl.read_csv(fama_french_paths.european25_value_weighted_returns_path, has_header=True, null_values=["-999", "-99.99"], schema_overrides={"DateID":pl.String} ).unpivot(cs.numeric(), index="DateID", variable_name="Portfolio", value_name="weighted_return")
@@ -92,16 +83,14 @@ class FamaFrenchInput:
         __european25_number = pl.read_csv(fama_french_paths.european25_N_firms_path, has_header=True, null_values=["-999", "-99.99"], schema_overrides={"DateID":pl.String}).unpivot(cs.numeric(), index="DateID", variable_name="Portfolio", value_name="N_firms")
         __european25 = __european25_value_weighted_returns.join(__european25_Avg_FirmSize, how = "full", on=["DateID", "Portfolio"], coalesce=True).join(__european25_number, how = "full", on=["DateID", "Portfolio"], coalesce=True)
         __european25 = __european25.with_columns(pl.lit("EU").alias("Region"), pl.lit("25").alias("N_Portfolios")
-                                            ).with_columns(Portfolio_market_size = pl.col("N_firms") * pl.col("Avg_FirmSize")
-                                            ).with_columns(Portfolio_return_cap = pl.col("weighted_return") * pl.col("Portfolio_market_size") / pl.col("Portfolio_market_size").sum().over("DateID")
-                                            ).with_columns(Market_return = pl.col("Portfolio_return_cap").sum().over("DateID"))
+                                            )
 
         self.fama_french_portfolios = pl.concat([__american6, __european6, __american25, __european25]
                                                 ).rename({"DateID": "TIME_PERIOD"}
                                                 ).with_columns((pl.col("TIME_PERIOD") + "01").str.to_date("%Y%m%d").alias("TIME_PERIOD")
                                                 ).with_columns(pl.col("TIME_PERIOD").dt.month_end().alias("TIME_PERIOD")
                                                 ).filter(pl.col("TIME_PERIOD") >= pl.date(year=2004, month = 8, day = 30)
-                                                ).rename({"weighted_return": "Return"}
+                                                ).rename({"weighted_return": "Return_USD"}
                                                 ).sort(["TIME_PERIOD","N_Portfolios", "Region", "Portfolio"])
 
 class YieldCurveInput:
