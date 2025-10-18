@@ -68,7 +68,7 @@ fama_french_factors_EUR = fama_french_factors(fama_french_portfolios_eur, return
 fama_french_portfolios = fama_french_portfolios_eur.join(fama_french_factors_USD, on = ["TIME_PERIOD", "Region"], how = "left"
                                     ).join(fama_french_factors_EUR, on = ["TIME_PERIOD", "Region"], how = "left"
                                     ).join(fama_french_input.ff_research_factors, on = "TIME_PERIOD", how = "left"
-                                    ).select(pl.exclude("MKT_RF", "HML", "SMB")
+                                    ).select(pl.exclude("Mkt_RF", "HML", "SMB")
                                     ).rename({"RF": "RF_US"}
                                     ).join(RF_EU, on = "TIME_PERIOD", how = "left"
                                     ).select(pl.exclude(["Portfolio_return_cap", "USD"])

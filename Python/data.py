@@ -1,7 +1,7 @@
 import os
 import polars as pl
 import polars.selectors as cs
-import numpy as np
+
 data_path = os.path.join(os.path.dirname( __file__ ), os.path.pardir, "Data")
 class FamaFrenchPaths:
     ff_research_factors_path = os.path.join(data_path, "F-F_Research_Data_Factors.csv")
@@ -46,9 +46,22 @@ class ExchangeRatePaths:
     # Input
     usd_exchange_rate_path = os.path.join(data_path, "Input", "USD_exchange_rate.csv" )
 
+class PortfolioAnalysisPaths:
+    __active_portfolio_input_folder = os.path.join(data_path, "Active_portfolio", "Input")
+    __active_portfolio_output_folder = os.path.join(data_path, "Active_portfolio", "Output")
+    def __init__(self):
+        self.portfolio_universe_path = os.path.join(self.__active_portfolio_input_folder, "portfolio_universe.csv")
+        self.efficient_frontiers = os.path.join(self.__active_portfolio_input_folder, "efficient_frontier.csv")
+        self.optimal_portfolio_strategies = os.path.join(self.__active_portfolio_input_folder, "portfolio_strategies.csv")
+        self.tdf_enums_path = os.path.join(self.__active_portfolio_input_folder, "tdf_enums.csv")
+
+        # Output
+        self.tdf_returns_path = os.path.join(self.__active_portfolio_output_folder, "tdf_returns.csv")
+        self.tdf_weights_path = os.path.join(self.__active_portfolio_output_folder, "tdf_weights.csv")
+        self.optimal_portfolio_strategies_returns_path = os.path.join(self.__active_portfolio_output_folder, "optimal_portfolio_strategies_return.csv")
+
 class FamaFrenchInput:
     def __init__(self, fama_french_paths):
-
         self.ff_research_factors = pl.read_csv(fama_french_paths.ff_research_factors_path, has_header=True, schema={"DateID": pl.String, "Mkt_RF": pl.Float64, "SMB": pl.Float64, "HML": pl.Float64, "RF": pl.Float64}
                                                ).rename({"DateID": "TIME_PERIOD"}
                                                  ).with_columns((pl.col("TIME_PERIOD") + "01").str.to_date("%Y%m%d").alias("TIME_PERIOD")
