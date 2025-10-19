@@ -5,6 +5,7 @@ class BasePortfolios6(Enum):
     Market = "Market_Return"
     Smb = "SMB"
     Hml = "HML"
+    Mom = "MOM"
     TechStocks = "Tech Stocks"
     SmallCap = "Small Cap"
     Big_HiPrior = "BIG HiPRIOR"
@@ -17,16 +18,40 @@ class BasePortfolios6(Enum):
     SmallLoPrior = "SMALL LoPRIOR"
 
 class PortFolioRegion(Enum):
-    MarketEu = '{"Market_Return","EU"}'
-    MarketUs = '{"Market_Return","US"}'
-    SmallCapEu = '{"Small Cap","EU"}'
-    SmallCapUs = '{"Small Cap","US"}'
-    TechEu = '{"Tech Stocks","EU"}'
-    TechUs = '{"Tech Stocks","US"}'
+    RfEu='{"RF","EU"}'
+    RfUs='{"RF","US"}'
+    SmallCapEu='{"Small Cap","EU"}'
+    SmallCapUs='{"Small Cap","US"}'
+    TechUs='{"Tech Stocks","US"}'
+    TechEu='{"Tech Stocks","EU"}'
+    MarketEu='{"Market_Return","EU"}'
+    MarketUs='{"Market_Return","US"}'
+    SmbEu='{"SMB","EU"}'
+    SmbUs='{"SMB","US"}'
+    HmlEu='{"HML","EU"}'
+    HmlUs='{"HML","US"}'
+    MomEu='{"MOM","EU"}'
+    MomUs='{"MOM","US"}'
+    BigHiPriorEu='{"BIG HiPRIOR","EU"}'
+    BigLoPriorEu='{"BIG LoPRIOR","EU"}'
+    Me1Prior2Eu='{"ME1 PRIOR2","EU"}'
+    Me2Prior2Eu='{"ME2 PRIOR2","EU"}'
+    SmallHiPriorEu='{"SMALL HiPRIOR","EU"}'
+    SmallLoPriorEu='{"SMALL LoPRIOR","EU"}'
+    BigHiPriorUs='{"BIG HiPRIOR","US"}'
+    BigLoPriorUs='{"BIG LoPRIOR","US"}'
+    Me1Prior2Ua='{"ME1 PRIOR2","US"}'
+    Me2Prior2Us='{"ME2 PRIOR2","US"}'
+    SmallHiPriorUs='{"SMALL HiPRIOR","US"}'
+    SmallLoPriorUs='{"SMALL LoPRIOR","US"}'
+
+
     MV = "MV-portfolio"
     GlobalMV = "Global Minimum Variance portfolio"
+    MaxReturn = "Maximal historical return"
     RP = "Risk Parity"
     BoundedEfficientFrontier = "Bounded efficient frontier"
+
     TDF2023_01_31 = 'TDF 2023-01-31'
     TDF2018_01_31 = 'TDF 2018-01-31'
     TDF2017_10_31 = 'TDF 2017-10-31'
@@ -121,6 +146,8 @@ class InvestmentStrategyPortfolios(Enum):
     MV = "MV-portfolio"
     GlobalMV = "Global Minimum Variance portfolio"
     RP = "Risk Parity"
+    MaxReturn = "Maximal historical return"
+
     TDF2023_01_31 = 'TDF 2023-01-31'
     TDF2018_01_31 = 'TDF 2018-01-31'
     TDF2017_10_31 = 'TDF 2017-10-31'

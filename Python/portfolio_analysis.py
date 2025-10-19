@@ -3,7 +3,7 @@ import plotly.express as px
 
 import data
 import portfolio_strategies
-from enums import PortFolioRegion, BasePortfolios6, InvestmentStrategyPortfolios
+from enums import PortFolioRegion, InvestmentStrategyPortfolios
 
 # Paths
 fama_french_paths = data.FamaFrenchPaths()
@@ -51,26 +51,28 @@ weights_tdf = risk_free_returns.with_columns(
 portfolio_universe = portfolio_strategies.PortfolioStrategy(fama_french_portfolios.filter(pl.col("N_Portfolios") == 6))
 
 # Investable assets
-portfolio_names = (BasePortfolios6.TechStocks.value, BasePortfolios6.SmallCap.value, BasePortfolios6.Market.value)
+asset_names =  (PortFolioRegion.TechUs.value, PortFolioRegion.MarketUs.value, PortFolioRegion.SmallCapUs.value, PortFolioRegion.TechEu.value, PortFolioRegion.MarketEu.value, PortFolioRegion.SmallCapEu.value)
+
 # Dates to make efficient frontier
 dates_efficient_frontier = pl.DataFrame(
     #{"Year": [2009]*12, "Month": range(1, 13), "Day": [1] * 12}
-     {"Year": [2009, 2014, 2019, 2024], "Month": [6] * 4, "Day": [30] * 4}
+    {"Year": [2009, 2014, 2019, 2024], "Month": [6] * 4, "Day": [30] * 4}
 ).with_columns(
     (pl.date(year = pl.col("Year"), month = pl.col("Month"), day = pl.col("Day"))).dt.month_end().alias("Date")
 )
 # Find the optimal predetermined strategies.
-optimal_strategies = portfolio_universe.running_optimal_portfolio_strategies(3 * 12, portfolio_names, dates_efficient_frontier)
+optimal_strategies = portfolio_universe.running_optimal_portfolio_strategies(3 * 12, asset_names, dates_efficient_frontier, last_tdf)
+
+px.scatter(optimal_strategies["Efficient frontier"], x = "Historical variance", y = "Historical return", color = "Portfolio", facet_col="TIME_PERIOD").show()
 
 # Calculating returns for the investment strategies
 ## Preparing input based on optimal portfolio strategies
-assets_returns = (portfolio_universe.portfolio_universe_EUR.select(
+assets_returns = portfolio_universe.portfolio_universe_EUR.select(
             pl.exclude("Return_RF_EU")
         ).filter(
             (pl.col("TIME_PERIOD") >= start_date) & (pl.col("TIME_PERIOD") <= last_tdf)
-        )
-        .filter(
-            pl.col("Portfolio").cast(BasePortfolios6).is_in(portfolio_names)
+        ).filter(
+            pl.col("Portfolio region").cast(PortFolioRegion).is_in(asset_names)
         ).pivot(
             index = "TIME_PERIOD", on = ["Portfolio", "Region"], values = "Return_EUR"
         ).unpivot(
@@ -80,9 +82,9 @@ assets_returns = (portfolio_universe.portfolio_universe_EUR.select(
             pl.col("Portfolio").cast(PortFolioRegion)
         ).select(
             portfolio_strategies.schema_asset_returns.keys()
-        ))
+        )
 
-portfolio_weights_shifted_one_period_later =  (portfolio_universe.optimal_portfolios.select(
+portfolio_weights_shifted_one_period_later =  optimal_strategies["Optimal strategies"].select(
             ["TIME_PERIOD", "Portfolio strategy", "Portfolio", "Weight"]
         ).filter(
             (pl.col("TIME_PERIOD") >= start_date) & (pl.col("TIME_PERIOD") <= last_tdf)
@@ -94,7 +96,7 @@ portfolio_weights_shifted_one_period_later =  (portfolio_universe.optimal_portfo
             {"Portfolio": PortFolioRegion, "Portfolio strategy": InvestmentStrategyPortfolios}
         ).select(
             portfolio_strategies.schema_portfolio_weights.keys()
-        ))
+        )
 
 portfolio_strategies_return_input = portfolio_strategies.PortfolioReturnInput(portfolio_weights_shifted_one_period_later, assets_returns)
 
@@ -102,30 +104,23 @@ portfolio_strategies_return_input = portfolio_strategies.PortfolioReturnInput(po
 apply_investment = portfolio_strategies.PortfolioReturnCalculator(portfolio_strategies_return_input)
 # Finding portfolio value for all in on the active portfolio strategies
 ## Balancing methods
-def mv_balancing(returns: dict[str, float], weights: dict[InvestmentStrategyPortfolios, float], initial_value: float) -> tuple[dict[InvestmentStrategyPortfolios, float], float]:
-    value_mv_strategy = initial_value * weights[InvestmentStrategyPortfolios.MV] * (1 + returns[InvestmentStrategyPortfolios.MV.value])
-    weights_mv_strategy = {InvestmentStrategyPortfolios.MV: 1}
-    return weights_mv_strategy, value_mv_strategy
+mv_balancing = apply_investment.all_in_strategy_returns(InvestmentStrategyPortfolios.MV)
+global_mv_balancing = apply_investment.all_in_strategy_returns(InvestmentStrategyPortfolios.GlobalMV)
+risk_parity_balancing = apply_investment.all_in_strategy_returns(InvestmentStrategyPortfolios.RP)
+max_return_balancing = apply_investment.all_in_strategy_returns(InvestmentStrategyPortfolios.MaxReturn)
 
-def global_mv_balancing(returns: dict[str, float], weights: dict[InvestmentStrategyPortfolios, float], initial_value: float) -> tuple[dict[InvestmentStrategyPortfolios, float], float]:
-    value_gmv_strategy = initial_value * weights[InvestmentStrategyPortfolios.GlobalMV] * (1 + returns[InvestmentStrategyPortfolios.GlobalMV.value])
-    weights_gmv_strategy = {InvestmentStrategyPortfolios.GlobalMV: 1}
-    return weights_gmv_strategy, value_gmv_strategy
-
-def risk_parity_rebalancing(returns: dict[str, float], weights: dict[InvestmentStrategyPortfolios, float], initial_value: float) -> tuple[dict[InvestmentStrategyPortfolios, float], float]:
-    value_rp_strategy = initial_value * weights[InvestmentStrategyPortfolios.RP] * (1 + returns[InvestmentStrategyPortfolios.RP.value])
-    weights_rp_strategy = {InvestmentStrategyPortfolios.RP: 1}
-    return weights_rp_strategy, value_rp_strategy
 ## Initial weights
 initial_weight_mv = {InvestmentStrategyPortfolios.MV: 1}
 initial_weight_gmv = {InvestmentStrategyPortfolios.GlobalMV: 1}
 initial_weight_rp = {InvestmentStrategyPortfolios.RP: 1}
+initial_weight_max_return = {InvestmentStrategyPortfolios.MaxReturn: 1}
 ## Run strategy
 returns_mv = apply_investment.portfolio_values(InvestmentStrategyPortfolios.MV.value, 1, initial_weight_mv, mv_balancing)
 returns_gmv = apply_investment.portfolio_values(InvestmentStrategyPortfolios.GlobalMV.value, 1, initial_weight_gmv, global_mv_balancing)
-returns_rp = apply_investment.portfolio_values(InvestmentStrategyPortfolios.RP.value, 1, initial_weight_rp, risk_parity_rebalancing)
+returns_rp = apply_investment.portfolio_values(InvestmentStrategyPortfolios.RP.value, 1, initial_weight_rp, risk_parity_balancing)
+returns_max_return = apply_investment.portfolio_values(InvestmentStrategyPortfolios.MaxReturn.value, 1, initial_weight_max_return, max_return_balancing)
 
-returns_active_portfolio = pl.concat([returns_mv, returns_gmv, returns_rp])
+returns_active_portfolio = pl.concat([returns_mv, returns_gmv, returns_rp, returns_max_return])
 px.line(returns_active_portfolio, x = "TIME_PERIOD", y = "Value", color = "Portfolio name").show()
 
 

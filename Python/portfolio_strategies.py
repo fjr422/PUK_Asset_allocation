@@ -17,16 +17,16 @@ class PortfolioStrategy:
         Calculating excess return measured in EUR over RF_EUR."""
         # Returns on long and combined portfolios
         __combined_portfolios_EUR = fama_french_data.select(
-            ["TIME_PERIOD", "Region", "Tech Stocks EUR", "Small Cap EUR", "Market_Return_EUR"]
+            ["TIME_PERIOD", "Region", "Tech Stocks EUR", "Small Cap EUR", "Market_Return_EUR", "MOM_EUR", "SMB_EUR"]
         ).unpivot(
-            ["Tech Stocks EUR", "Small Cap EUR", "Market_Return_EUR"], index = ["TIME_PERIOD", "Region"], variable_name = "Portfolio", value_name = "Return_EUR"
+            ["Tech Stocks EUR", "Small Cap EUR", "Market_Return_EUR", "MOM_EUR", "SMB_EUR"], index = ["TIME_PERIOD", "Region"], variable_name = "Portfolio", value_name = "Return_EUR"
         ).with_columns(
-            pl.col("Portfolio").str.replace(" EUR", '').str.replace("_EUR", '').cast(BasePortfolios6)
+            pl.col("Portfolio").str.replace(" EUR", '').str.replace("_EUR", '').cast(BasePortfolios6),
         ).unique(
         )
 
         # Return on RF for EU and US market measured in EUR.
-        __RF_returns_EUR = (fama_french_data.select(
+        __RF_returns_EUR = fama_french_data.select(
             ["TIME_PERIOD", "Region", "RF_US_EUR", "RF_EU"]
         ).unpivot(
             ["RF_EU", "RF_US_EUR"], index = ["TIME_PERIOD", "Region"], variable_name = "Portfolio", value_name = "Return_EUR"
@@ -35,7 +35,7 @@ class PortfolioStrategy:
         ).unique(
         ).with_columns(
             (pl.col("Portfolio").str.replace("_US_EUR", '').str.replace("_EU", '')).alias("Portfolio").cast(BasePortfolios6)
-        ))
+        )
 
         # Check if only one RF_EU/US pr. period.
         __check_RF = __RF_returns_EUR.group_by(
@@ -65,8 +65,11 @@ class PortfolioStrategy:
             __RF_EUR_TIME_PERIOD, on = "TIME_PERIOD"
         ).select(
             ["TIME_PERIOD", "Portfolio", "Region", "Return_EUR", "Return_RF_EU"]
+        ).with_columns(
+            (pl.col("Return_EUR") - pl.col("Return_RF_EU")).alias("Excess return RF_EU"),
+            ('{"' + pl.col("Portfolio") + '","' + pl.col("Region") + '"}').alias("Portfolio region").cast(PortFolioRegion)
         ).sort(
-            ["TIME_PERIOD"], descending=False
+            ["Portfolio", "TIME_PERIOD"], descending=False
         )
 
     # Methods
@@ -83,51 +86,23 @@ class PortfolioStrategy:
         mu: Expected surplus return for assets."""
         return np.dot(w, mu)
 
-    def __compute_portfolio_sharpe_ratio(self, w: np.ndarray, mu: np.ndarray[float], mu_rf: float, var_matrix: np.ndarray) -> float:
+    def __compute_portfolio_sharpe_ratio(self, w: np.ndarray, mu: np.ndarray[float], mu_e: np.ndarray[float], var_matrix: np.ndarray, var_matrix_e: np.ndarray, include_rf: bool, index_rf: int) -> float:
         """Calculate sharpe ratio for a portfolio with weights (w) and covariance matrix (var_matrix) for the assets."""
-        portfolio_excess_mean = self.__compute_portfolio_return(w, mu) - mu_rf
-        portfolio_variance = self.__compute_portfolio_variance(w, var_matrix)
-        return portfolio_excess_mean / math.sqrt(portfolio_variance)
 
-    def __global_minium_variance(self, var_matrix: np.ndarray, assets: list[str]):
-        """Weights for global minimum variance portfolio."""
-        n_assets = len(assets)
-        initial_weights = np.ones(n_assets) / n_assets
-
-        # Constraint: sum of weights must be 1
-        constraints = ({'type': 'eq', 'fun': lambda w: np.sum(w) - 1})
-
-        # Bounds for the weights (between 0 and 1)
-        bounds = [(0, 1)] * n_assets
-        result = minimize(lambda w: self.__compute_portfolio_variance(w, var_matrix), initial_weights, bounds = bounds, constraints = constraints)
-
-        return dict(zip(assets, result.x))  # Optimal weights
-
-    # Minimum variance optimisation for fixed mu
-    def __mv_optimisation(self, mu: np.ndarray, var_matrix: np.ndarray, mu_target, assets: str):
-        """Finding portfolio with the least variance for a given return."""
-        n_assets = len(assets)
-        initial_weights = np.ones(n_assets) / n_assets
-
-        # Constraint: sum of weights must be 1
-        constraints = ({'type': 'eq', 'fun': lambda w: np.sum(w) - 1},
-                       {'type': 'eq', 'fun': lambda w: self.__compute_portfolio_return(w, mu) - mu_target})
-
-        bounds = [(0, 1)] * n_assets
-        result = minimize(lambda w: self.__compute_portfolio_variance(w, var_matrix), initial_weights, constraints = constraints, bounds = bounds)
-        #"Weights": dict(zip(assets, result.x))
-        if result.success:
-            return {"Variance": result.fun, "Return": mu_target}
+        if include_rf:
+            portfolio_mean = self.__compute_portfolio_return(np.delete(w, index_rf, axis = 0), mu_e)
+            portfolio_variance = self.__compute_portfolio_variance(np.delete(w, index_rf, axis = 0), var_matrix_e)
         else:
-            print(mu)
-            print(var_matrix)
-            raise ValueError("Optimization did not converge" )
+            portfolio_mean = self.__compute_portfolio_return(w, mu)
+            portfolio_variance = self.__compute_portfolio_variance(w, var_matrix)
+        return portfolio_mean / math.sqrt(portfolio_variance)
 
     # Optimization to maximize Sharpe ratio
-    def __optimize_portfolio_sharpe(self, mu_rf: float, mu: np.ndarray[float], var_matrix: np.ndarray, assets: list[str], initial_weights: np.ndarray):
+    def __optimize_portfolio_sharpe(self, mu: np.ndarray[float], mu_e: np.ndarray[float], var_matrix: np.ndarray, var_matrix_e: np.ndarray, asset_names: tuple, initial_weights: np.ndarray, include_rf: bool, index_rf: int):
         # Initialize with equal weights
-        n_assets = len(assets)
-        #initial_weights = np.ones(n_assets) / n_assets
+        n_assets = len(asset_names)
+
+        weights = np.ones(n_assets) / n_assets
 
         # Constraint: sum of weights must be 1
         constraints = ({'type': 'eq', 'fun': lambda w: np.sum(w) - 1})
@@ -135,16 +110,50 @@ class PortfolioStrategy:
         bounds = [(0, 1)] * n_assets
 
         # Optimization function: maximise Sharpe Ratio
-        if (mu < mu_rf).all():
-            mu_mod = mu + mu_rf + mu.min()
-            result = minimize(lambda w: - self.__compute_portfolio_sharpe_ratio(w, mu_mod, mu_rf, var_matrix), initial_weights, bounds = bounds, constraints = constraints)
-        else:
-            result = minimize(lambda w: - self.__compute_portfolio_sharpe_ratio(w, mu, mu_rf, var_matrix), initial_weights, bounds = bounds, constraints = constraints)
+        if include_rf:
+            # When RF is available and every other asset has negative excess return maximal sharpe will be all-in on RF.
+            if (mu_e < 0).all():
+                weights[:index_rf] = 0
+                weights[index_rf + 1:] = 0
+                weights[index_rf] = 1
+                return dict(zip(asset_names, weights))
+        result = minimize(lambda w: - self.__compute_portfolio_sharpe_ratio(w, mu, mu_e, var_matrix, var_matrix_e, include_rf, index_rf), weights, bounds = bounds, constraints = constraints)
+        return dict(zip(asset_names, result.x))  # Optimal weights
 
-        return dict(zip(assets, result.x))  # Optimal weights
+    def __global_minium_variance(self, var_matrix: np.ndarray, assets: tuple[PortFolioRegion], include_rf: bool, index_rf: int):
+        """Weights for global minimum variance portfolio. If risk-free is included. All in that"""
+
+        n_assets = len(assets)
+        initial_weights = np.ones(n_assets) / n_assets
+
+        if include_rf:
+            initial_weights[:index_rf] = 0
+            initial_weights[index_rf + 1:] = 0
+            initial_weights[index_rf] = 1
+            return  dict(zip(assets, initial_weights))
+        else:
+            # Constraint: sum of weights must be 1
+            constraints = ({'type': 'eq', 'fun': lambda w: np.sum(w) - 1})
+
+            # Bounds for the weights (between 0 and 1)
+            bounds = [(0, 1)] * n_assets
+            result = minimize(lambda w: self.__compute_portfolio_variance(w, var_matrix), initial_weights, bounds = bounds, constraints = constraints)
+
+            return dict(zip(assets, result.x))  # Optimal weights
 
     @staticmethod
-    def __optimize_risk_parity(var_matrix: np.ndarray, assets: list[str]):
+    def __maximal_return(mu: np.ndarray, mu_e: np.ndarray, asset_names: tuple, include_rf: bool, index_rf: int):
+        weights = np.zeros(len(asset_names))
+        if include_rf:
+            if (mu_e < 0).all():
+                weights[index_rf] = 1
+            else:
+                weights[np.argmax(mu_e)] = 1
+        else: weights[np.argmax(mu)] = 1
+        return dict(zip(asset_names, weights))
+
+    @staticmethod
+    def __optimize_risk_parity(var_matrix: np.ndarray, asset_names: tuple):
         # Positive allocation and equal volatility
         inverse_volatility = 1 / np.sqrt(var_matrix.diagonal())
         total_inverse_volatility = np.sum(inverse_volatility)
@@ -154,23 +163,56 @@ class PortfolioStrategy:
         if not math.isclose(np.sum(weights), 1):
             raise Exception("Weights do not sum to 1.")
 
-        return dict(zip(assets, weights))
+        return dict(zip(asset_names, weights))
 
-    def __efficient_frontier(self, mu: np.ndarray[float], var_matrix: np.ndarray, mu_global_minimum_variance: float, mu_max: float, assets):
-        range_returns = np.arange(mu_global_minimum_variance, mu_max, 0.01)
+    # Minimum variance optimisation for fixed mu
+    def __mv_optimisation(self, mu: np.ndarray, mu_e: np.ndarray, var_matrix: np.ndarray, var_matrix_e: np.ndarray, mu_target, assets: str, include_rf: bool, index_rf: int):
+        """Finding portfolio with the least variance for a given return."""
+        n_assets = len(assets)
+        initial_weights = np.ones(n_assets) / n_assets
 
+        bounds = [(0, 1)] * n_assets
+
+        # Constraint: sum of weights must be 1 and hit target return
+        if include_rf:
+            constraints = ({'type': 'eq', 'fun': lambda w: np.sum(w) - 1},
+                           {'type': 'eq', 'fun': lambda w: self.__compute_portfolio_return(np.delete(w, index_rf, axis = 0), mu_e) - mu_target})
+            result = minimize(lambda w: self.__compute_portfolio_variance(np.delete(w, index_rf, axis = 0), var_matrix_e), initial_weights, constraints = constraints, bounds = bounds)
+        else:
+            constraints = ({'type': 'eq', 'fun': lambda w: np.sum(w) - 1},
+                           {'type': 'eq', 'fun': lambda w: self.__compute_portfolio_return(w, mu) - mu_target})
+            result = minimize(lambda w: self.__compute_portfolio_variance(w, var_matrix), initial_weights, constraints = constraints, bounds = bounds)
+
+        if result.success:
+            return {"Variance": result.fun, "Return": mu_target}
+        else:
+            raise Exception("Optimization did not converge" )
+
+    def __efficient_frontier(self, mu: np.ndarray, mu_e:np.ndarray, var_matrix: np.ndarray, var_matrix_e: np.ndarray, mu_global_minimum_variance: float, mu_max: float, assets, include_rf: bool, index_rf: int):
         frontier_schema = {"Return": pl.Float64, "Variance": pl.Float64}
         efficient_frontier = pl.DataFrame(schema = frontier_schema)
+
+        if include_rf:
+            if (mu_e < 0).all(): # If none is greater than risk free. Then optimal is to be in RF.
+                return efficient_frontier
+
+        range_returns = np.arange(mu_global_minimum_variance, mu_max, 0.01)
+
         for mu_target in range_returns:
-            frontier_values = self.__mv_optimisation(mu, var_matrix, mu_target, assets)
+            frontier_values = self.__mv_optimisation(mu, mu_e, var_matrix, var_matrix_e, mu_target, assets, include_rf, index_rf)
             df_frontier = pl.DataFrame({"Return": frontier_values["Return"], "Variance": frontier_values["Variance"]}).select(frontier_schema.keys())
             efficient_frontier.extend(df_frontier)
         return efficient_frontier
 
-    def __convert_portfolio_to_weight_to_output(self, portfolio_to_weight: dict, mu: np.ndarray[float], var_matrix: np.ndarray, time_period: pl.Date, portfolio_desc: InvestmentStrategyPortfolios, df_schema: dict):
+    def __convert_portfolio_to_weight_to_output(self, portfolio_to_weight: dict, mu: np.ndarray[float], mu_e: np.ndarray[float], var_matrix: np.ndarray, var_matrix_e: np.ndarray, include_rf: bool, index_rf: int, time_period: pl.Date, portfolio_desc: InvestmentStrategyPortfolios, df_schema: dict):
         weights = np.array(list(portfolio_to_weight.values()))
-        mu_portfolio = self.__compute_portfolio_return(weights, mu)
-        variance_portfolio = self.__compute_portfolio_variance(weights, var_matrix)
+
+        if include_rf:
+            mu_portfolio = self.__compute_portfolio_return(np.delete(weights, index_rf, axis = 0), mu_e)
+            variance_portfolio = self.__compute_portfolio_variance(np.delete(weights, index_rf, axis = 0), var_matrix_e)
+        else:
+            mu_portfolio = self.__compute_portfolio_return(weights, mu)
+            variance_portfolio = self.__compute_portfolio_variance(weights, var_matrix)
 
         df = pl.from_dict(
             portfolio_to_weight
@@ -179,8 +221,9 @@ class PortfolioStrategy:
             pl.lit(portfolio_desc).alias("Portfolio strategy"),
             pl.lit(mu_portfolio).alias("Historical return"),
             pl.lit(variance_portfolio).alias("Historical variance"),
+            pl.lit(include_rf).alias("Is RF Included"),
         ).unpivot(
-            index = ["TIME_PERIOD", "Portfolio strategy", "Historical return", "Historical variance"], variable_name= "Portfolio", value_name = "Weight"
+            index = ["TIME_PERIOD", "Portfolio strategy", "Historical return", "Historical variance", "Is RF Included"], variable_name = "Portfolio", value_name = "Weight"
         ).cast(
             {"Portfolio": PortFolioRegion, "Portfolio strategy": InvestmentStrategyPortfolios,}
         ).select(
@@ -188,34 +231,50 @@ class PortfolioStrategy:
         )
         return df
 
-    def running_optimal_portfolio_strategies(self, window_size: int, portfolio_names: tuple, dates_efficient_frontier: pl.DataFrame):
+    def running_optimal_portfolio_strategies(self, window_size: int, asset_names: tuple, dates_efficient_frontier: pl.DataFrame, stop_date: pl.Date):
         """Find the optimal portfolio weights for the following investment strategies:
             * Mean-variance: weights between 0 and 1
             * Mean-variance: weights unconstrained
             * Risk-parity normalising by equal period volatility
         Parameters:
             * window_size: size of the sliding window in months.
-            * portfolio_names: Portfolio universe.
+            * asset_names: Portfolio universe.
             * dates_efficient_frontier: Dates where efficient frontier is extracted.
         """
-        time_periods = self.portfolio_universe_EUR["TIME_PERIOD"].unique().sort(descending = False)
-        portfolios = self.portfolio_universe_EUR.filter(
-            pl.col("Portfolio").cast(BasePortfolios6).is_in(portfolio_names)
+        def tuple_except_index(tuple_to_mod: tuple, index_to_exclude: int):
+            return tuple_to_mod[:index_to_exclude] + tuple_to_mod[index_to_exclude + 1:]
+
+        time_periods = self.portfolio_universe_EUR.filter(pl.col("TIME_PERIOD") <= stop_date)["TIME_PERIOD"].unique().sort(descending = False)
+
+        portfolios_return = self.portfolio_universe_EUR.filter(
+            pl.col("Portfolio region").cast(PortFolioRegion).is_in(asset_names)
+        ).select(
+            ["TIME_PERIOD", "Portfolio region", "Return_RF_EU", "Return_EUR"]
         ).pivot(
-            values = "Return_EUR", index = ["TIME_PERIOD", "Return_RF_EU"], on = ["Portfolio", "Region"]
+            values = "Return_EUR", index = ["TIME_PERIOD", "Return_RF_EU"], on = "Portfolio region"
+        ).sort(
+            ["TIME_PERIOD"], descending=False
+        )
+        portfolios_excess_return = self.portfolio_universe_EUR.filter(
+            pl.col("Portfolio region").cast(PortFolioRegion).is_in(asset_names)
+        ).select(
+            ["TIME_PERIOD", "Portfolio region", "Excess return RF_EU", "Return_RF_EU"]
+        ).pivot(
+            values = "Excess return RF_EU", index = ["TIME_PERIOD", "Return_RF_EU"], on = "Portfolio region"
         ).sort(
             ["TIME_PERIOD"], descending=False
         )
 
-        assets = portfolios.unpivot(
-            index = ["TIME_PERIOD", "Return_RF_EU"], value_name = "Return_EUR", variable_name = "Portfolio_ID"
-        ).with_columns(
-            pl.col("Portfolio_ID").cast(PortFolioRegion),
-        )["Portfolio_ID"].unique().sort()
 
-        # Getting returns. Order is portfolio_IDs. Not using RF_EUR
-        returns = portfolios[assets.to_list()].to_numpy()
-        mu_rf = portfolios["Return_RF_EU"].rolling_mean(window_size).to_numpy()
+        # Getting returns. Order is portfolio_IDs.
+        include_rf = PortFolioRegion.RfEu.value in asset_names
+        returns = portfolios_return[asset_names].to_numpy()
+        if include_rf:
+            index_rf = asset_names.index(PortFolioRegion.RfEu.value)
+            excess_returns = portfolios_excess_return[tuple_except_index(asset_names, index_rf)].to_numpy()
+        else:
+            index_rf = None
+            excess_returns = None
 
         # Looping across window and finding optimal portfolio weights
         weights_schema = {"TIME_PERIOD": pl.Date, "Portfolio": PortFolioRegion, "Weight": pl.Float64, "Portfolio strategy": InvestmentStrategyPortfolios, "Historical return": pl.Float64, "Historical variance": pl.Float64}
@@ -224,33 +283,54 @@ class PortfolioStrategy:
         efficient_frontier = pl.DataFrame(schema = efficient_frontier_schema)
 
         for i in range(window_size - 1, len(time_periods)):
-            rolling_returns = returns.copy()[i - window_size + 1:i + 1]
-
             # Input values
+            rolling_returns = returns[i - window_size + 1:i + 1]
             mu = np.mean(rolling_returns, axis=0)
             var_matrix = np.cov(rolling_returns, rowvar=False)
+            if include_rf:
+                rolling_excess_returns = excess_returns[i - window_size + 1:i + 1]
+                mu_e = np.mean(rolling_excess_returns, axis=0)
+                var_matrix_e = np.cov(rolling_excess_returns, rowvar=False)
+            else:
+                mu_e = None
+                var_matrix_e = None
+
             time_period = time_periods[i]
 
             # Global minimum variance
-            global_minimum_variance_dict = self.__global_minium_variance(var_matrix, assets)
-            global_minimum_variance = self.__convert_portfolio_to_weight_to_output(global_minimum_variance_dict, mu, var_matrix, time_period, InvestmentStrategyPortfolios.GlobalMV, weights_schema)
+            global_minimum_variance_dict = self.__global_minium_variance(var_matrix, asset_names, include_rf, index_rf)
+            global_minimum_variance = self.__convert_portfolio_to_weight_to_output(global_minimum_variance_dict, mu, mu_e, var_matrix, var_matrix_e, include_rf, index_rf, time_period, InvestmentStrategyPortfolios.GlobalMV, weights_schema)
+
+            # Maximal return
+            maximal_return_dict = self.__maximal_return(mu, mu_e, asset_names, include_rf, index_rf)
+            maximal_return = self.__convert_portfolio_to_weight_to_output(maximal_return_dict, mu, mu_e, var_matrix, var_matrix_e, include_rf, index_rf, time_period, InvestmentStrategyPortfolios.MaxReturn, weights_schema)
 
             # Mean-variance optimisation of Sharpe-Ratio
-            mv_bounded_dict = self.__optimize_portfolio_sharpe(mu_rf[i], mu, var_matrix, assets, np.array(list(global_minimum_variance_dict.values())))
-            mv_bounded = self.__convert_portfolio_to_weight_to_output(mv_bounded_dict, mu, var_matrix, time_period, InvestmentStrategyPortfolios.MV, weights_schema)
+            gmv_weights = np.array(list(global_minimum_variance_dict.values()))
+
+            mv_bounded_dict = self.__optimize_portfolio_sharpe(mu, mu_e, var_matrix, var_matrix_e, asset_names, gmv_weights, include_rf, index_rf)
+            mv_bounded = self.__convert_portfolio_to_weight_to_output(mv_bounded_dict,mu, mu_e, var_matrix, var_matrix_e, include_rf, index_rf, time_period, InvestmentStrategyPortfolios.MV, weights_schema)
 
             # Risk parity
-            risk_parity_dict = self.__optimize_risk_parity(var_matrix, assets)
-            risk_parity = self.__convert_portfolio_to_weight_to_output(risk_parity_dict, mu, var_matrix, time_period, InvestmentStrategyPortfolios.RP, weights_schema)
+            risk_parity_dict = self.__optimize_risk_parity(var_matrix, asset_names)
+            risk_parity = self.__convert_portfolio_to_weight_to_output(risk_parity_dict, mu, mu_e, var_matrix, var_matrix_e, include_rf, index_rf, time_period, InvestmentStrategyPortfolios.RP, weights_schema)
 
             # Combining and adding
-            investment_strategies = pl.concat([global_minimum_variance, mv_bounded, risk_parity])
+            investment_strategies = pl.concat([global_minimum_variance, maximal_return, mv_bounded, risk_parity])
 
             optimized_weights.extend(investment_strategies)
 
             # Efficient_frontier when relevant
             if not dates_efficient_frontier.filter(pl.col("Date") == time_period).is_empty():
-                efficient_frontier_bounded_data = self.__efficient_frontier(mu, var_matrix, global_minimum_variance["Historical return"].min(), mu.max(), assets)
+
+                if include_rf:
+                    mu_max = mu_e.max()
+                    mu_plot = np.insert(mu_e, index_rf, 0)
+                else:
+                    mu_max = mu.max()
+                    mu_plot = mu.copy()
+
+                efficient_frontier_bounded_data = self.__efficient_frontier(mu, mu_e, var_matrix, var_matrix_e, global_minimum_variance["Historical return"].min(), mu_max, asset_names, include_rf, index_rf)
 
                 efficient_frontier_bounded = efficient_frontier_bounded_data.with_columns(
                     pl.lit("l").alias("Type"),
@@ -263,7 +343,7 @@ class PortfolioStrategy:
                 ).select(efficient_frontier_schema.keys())
 
                 portfolios_frontier = pl.DataFrame(
-                    {"Portfolio": assets, "Historical return": mu, "Historical variance": var_matrix.diagonal()}
+                    {"Portfolio": asset_names, "Historical return": mu_plot, "Historical variance": var_matrix.diagonal()}
                 ).with_columns(
                     pl.lit("p").alias("Type"),
                     pl.lit(time_period).alias("TIME_PERIOD")
@@ -289,8 +369,6 @@ class PortfolioStrategy:
                     efficient_frontier_time
                 )
 
-        self.efficient_frontier = efficient_frontier
-        self.optimal_portfolios = optimized_weights
         return {"Optimal strategies": optimized_weights, "Efficient frontier": efficient_frontier}
 
 # Portfolio return classes
@@ -329,9 +407,16 @@ class PortfolioReturnCalculator:
         ).sort(
             ["Portfolio strategy", "TIME_PERIOD"]
         )
+    def all_in_strategy_returns(self, investment_strategy_portfolio: InvestmentStrategyPortfolios) -> Callable[[dict[str, float], dict[InvestmentStrategyPortfolios, float], float], tuple[dict[InvestmentStrategyPortfolios, float], float]]:
+        """Strategy going all in on one asset."""
+        def balancing(returns: dict[str, float], weights: dict[InvestmentStrategyPortfolios, float], initial_value: float) -> tuple[dict[InvestmentStrategyPortfolios, float], float]:
+            value = initial_value * weights[investment_strategy_portfolio] * (1 + returns[investment_strategy_portfolio.value])
+            weights = {investment_strategy_portfolio: 1}
+            return weights, value
+        return balancing
 
     def portfolio_values(self, portfolio_name: str, initial_value: float, initial_weights: dict[InvestmentStrategyPortfolios, float], balancing_method: Callable[[dict[str, float], dict[InvestmentStrategyPortfolios, float], float], tuple[dict[InvestmentStrategyPortfolios, float], float]]):
-
+        """Calculate the value of a portfolio for an investment strategy where balancing at each timepoint."""
         time_period_to_investment_strategy_to_return = self.strategy_returns.pivot(
             index = "TIME_PERIOD", values = "Return", on = "Portfolio strategy"
         ).sort(
