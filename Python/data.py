@@ -60,7 +60,8 @@ class PortfolioAnalysisPaths:
         # Output
         self.tdf_returns_path = os.path.join(self.__active_portfolio_output_folder, "tdf_returns.csv")
         self.tdf_weights_path = os.path.join(self.__active_portfolio_output_folder, "tdf_weights.csv")
-        self.optimal_portfolio_strategies_returns_path = os.path.join(self.__active_portfolio_output_folder, "optimal_portfolio_strategies_values.csv")
+        self.optimal_long_portfolio_strategies_returns_path = os.path.join(self.__active_portfolio_output_folder, "optimal_long_portfolio_strategies_values.csv")
+        self.optimal_short_portfolio_strategies_returns_path = os.path.join(self.__active_portfolio_output_folder, "optimal_short_portfolio_strategies_values.csv")
 
 class FamaFrenchInput:
     def __init__(self, fama_french_paths):
