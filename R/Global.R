@@ -56,9 +56,9 @@ setwd(WD)
     #     EU25_AvgVWR_Monthly, EU25_NFirm, EU25_AvgFirmSize,
     #     US6_AvgVWR_Monthly, US6_NFirm, US6_AvgFirmSize,
     #     US25_AvgVWR_Monthly, US25_NFirm, US25_AvgFirmSize, FF3_Factors,
-    #     file = "Data/FactorModelData.RData")
+    #     file = "R/Data/FactorModelData.RData")
   
-    #load("Data/FactorModelData.RData")
+    #load("R/Data/FactorModelData.RData")
     
     #EU25 <- EU25_AvgVWR_Monthly %>% pivot_longer(cols = -DateID, names_to = "Portfolio", values_to = "Return") %>%
     #  left_join(EU25_NFirm %>% pivot_longer(cols = -DateID, names_to = "Portfolio", values_to = "N_Firms"), 
@@ -86,9 +86,9 @@ setwd(WD)
      
     #PF_Data <- rbind(EU25, EU6, US25, US6)
     
-    #save(PF_Data, FF3_Factors, file = "Data/FactorModelData_Clean.RData")
+    #save(PF_Data, FF3_Factors, file = "R/Data/FactorModelData_Clean.RData")
     
-    #load("Data/FactorModelData_Clean.RData")
+    #load("R/Data/FactorModelData_Clean.RData")
     
     #PF_Data <- PF_Data %>% mutate(Region = ifelse(Division %in% c("EU25", "EU6"), "EU", "US"))
     
@@ -115,9 +115,9 @@ setwd(WD)
     #   select(c("CURRENCY", "TIME_PERIOD", "BETA0", "BETA1", "BETA2", "BETA3", "TAU1", "TAU2"))
     # 
     #YieldCurveData$TIME_PERIOD <- as.Date(as.character(YieldCurveData$TIME_PERIOD), format = "%Y-%m-%d")
-    #write.csv(YieldCurveData, "Data/YieldCurveDataClean.csv", row.names = FALSE)
+    #write.csv(YieldCurveData, "R/Data/YieldCurveDataClean.csv", row.names = FALSE)
     # 
-    # YieldCurveData <- read.csv("Data/YieldCurveDataClean.csv")
+    # YieldCurveData <- read.csv("R/Data/YieldCurveDataClean.csv")
     # 
     # a <- YieldCurveData %>% mutate(TTM = 1/12) %>% mutate(spotrate = BETA0 + BETA1 * ((1 - exp(-TTM/TAU1)) / (TTM/TAU1)) + 
     #                                                             BETA2 * (((1 - exp(-TTM/TAU1)) / (TTM/TAU1)) - exp(-TTM/TAU1)) + 
