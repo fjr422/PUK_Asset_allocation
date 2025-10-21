@@ -11,6 +11,10 @@ def shift_date_by_months(date: pd.Timestamp, months: int):
     shift_date_month_end = shift_date + pd.offsets.MonthEnd()
     return shift_date_month_end
 
+def shift_date_by_months_pl(date: pl.date, months: int):
+    """Shift a date to the equivelant month end months later."""
+    return date.dt.month_start().dt.offset_by(str(months) + "mo").dt.month_end()
+
 assets_start_date_pd = pd.Timestamp(year = 2004, month = 8, day = 31)
 assets_start_date_pl = pl.date(year = assets_start_date_pd.year, month = assets_start_date_pd.month, day = assets_start_date_pd.day)
 

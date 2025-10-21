@@ -16,12 +16,12 @@ tdf_returns = pl.read_csv(portfolio_analysis_paths.tdf_returns_path, try_parse_d
 tdf_weights = pl.read_csv(portfolio_analysis_paths.tdf_weights_path, try_parse_dates=True,  schema_overrides={"TIME_PERIOD": pl.Date, "Portfolio": PortFolioRegion, "Portfolio strategy": InvestmentStrategyPortfolios})
 
 ## Assets to invest in
-asset_names = (PortFolioRegion.MomEu.value, PortFolioRegion.MarketUs.value, PortFolioRegion.SmallCapUs.value, PortFolioRegion.TechEu.value, PortFolioRegion.MarketEu.value, PortFolioRegion.SmallCapEu.value)
+asset_names = (PortFolioRegion.SmallCapUs.value, PortFolioRegion.TechEu.value, PortFolioRegion.MarketEu.value, PortFolioRegion.SmallCapEu.value)
 portfolio_universe = portfolio_strategies.PortfolioStrategy(fama_french_portfolios.filter(pl.col("N_Portfolios") == 6))
 optimal_strategies = portfolio_universe.running_optimal_portfolio_strategies(3 * 12, asset_names, pl.DataFrame({"a": [None]}).clear(), common_var.last_tdf_pl)
 
 # Selected active strategy
-active_strategy = InvestmentStrategyPortfolios.RP
+active_strategy = InvestmentStrategyPortfolios.MV
 
 ## Apply investment strategy
 reserve_returns = tdf_returns.select(
@@ -115,7 +115,7 @@ for date, values in tdf_runs.items():
     tdf_strategy = InvestmentStrategyPortfolios(values["Portfolio"])
     zero_coupon = values["ZC"]
 
-    initial_value_reserve = initial_contribution * (1 / common_var.l_target) * zero_coupon
+    initial_value_reserve = initial_contribution * (1 / common_var.l_target)
     initial_value_active = initial_contribution - initial_value_reserve
 
     initial_values_tie_in = dict()

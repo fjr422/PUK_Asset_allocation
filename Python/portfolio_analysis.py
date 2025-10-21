@@ -6,6 +6,15 @@ import data
 import portfolio_strategies
 from enums import PortFolioRegion, InvestmentStrategyPortfolios
 
+def __all_in_weights(df: pl.DataFrame):
+    return df.with_columns(
+        pl.lit(1).cast(pl.Float64).alias("Weight"),
+        pl.col("Portfolio").cast(InvestmentStrategyPortfolios).alias("Portfolio strategy")
+    ).drop_nulls(
+    ).select(
+        portfolio_strategies.schema_portfolio_weights.keys()
+    )
+
 # Paths
 fama_french_paths = data.FamaFrenchPaths()
 yield_curve_paths = data.YieldCurvePaths()
@@ -39,25 +48,21 @@ risk_free_returns = pl.concat(
 ).with_columns(
     (100 * (pl.col("ZC") - pl.col("ZC").shift(1).over("Portfolio")) / pl.col("ZC").shift(1).over("Portfolio")).alias("Return")
 ).with_columns(
-    (common_var.shift_date_by_months(pl.col("Portfolio"), -common_var.tdf_end_in_months)).alias("TDF inception date"),
+    (common_var.shift_date_by_months_pl(pl.col("Portfolio"), -common_var.tdf_end_in_months)).alias("TDF inception date"),
     ("TDF " +  pl.col("Portfolio").cast(pl.String)).alias("Portfolio")
 )
 #### Creating TDFs as portfolio enums: risk_free_returns.select(pl.col("Portfolio")).unique().with_columns((pl.col("Portfolio").str.replace_all(' ', '').str.replace_all('-', '_') + " = '" + pl.col("Portfolio") + "'").alias("Portfolio_Enum")).select("Portfolio_Enum").write_csv(portfolio_analysis_paths.tdf_enums_path)
-
 ## Defining weights
-weights_tdf = risk_free_returns.with_columns(
-    pl.lit(1).alias("Weight"),
-    pl.col("Portfolio").alias("Portfolio strategy")
-).drop_nulls(
-).select(
-    ["TIME_PERIOD", "Portfolio strategy", "Portfolio", "Weight"]
-)
+
+
+weights_tdf = __all_in_weights(risk_free_returns)
 
 # Initialising portfolio universe
 portfolio_universe = portfolio_strategies.PortfolioStrategy(fama_french_portfolios.filter(pl.col("N_Portfolios") == 6))
 
 # Investable assets
-asset_names = (PortFolioRegion.TechUs.value, PortFolioRegion.MarketUs.value, PortFolioRegion.SmallCapUs.value, PortFolioRegion.TechEu.value, PortFolioRegion.MarketEu.value, PortFolioRegion.SmallCapEu.value)
+assets = (PortFolioRegion.TechUs, PortFolioRegion.MarketUs, PortFolioRegion.SmallCapUs, PortFolioRegion.TechEu, PortFolioRegion.MarketEu, PortFolioRegion.SmallCapEu)
+asset_names = tuple([name.value for name in assets]) #(PortFolioRegion.TechUs.value, PortFolioRegion.MarketUs.value, PortFolioRegion.SmallCapUs.value, PortFolioRegion.TechEu.value, PortFolioRegion.MarketEu.value, PortFolioRegion.SmallCapEu.value)
 
 # Dates to make efficient frontier
 dates_efficient_frontier = pl.DataFrame(
@@ -91,6 +96,7 @@ assets_returns = portfolio_universe.portfolio_universe_EUR.select(
             portfolio_strategies.schema_asset_returns.keys()
         )
 
+## Weights assets and strategies
 portfolio_weights_shifted_one_period_later =  optimal_strategies["Optimal strategies"].select(
             ["TIME_PERIOD", "Portfolio strategy", "Portfolio", "Weight"]
         ).filter(
@@ -105,36 +111,33 @@ portfolio_weights_shifted_one_period_later =  optimal_strategies["Optimal strate
             portfolio_strategies.schema_portfolio_weights.keys()
         )
 
-portfolio_strategies_return_input = portfolio_strategies.PortfolioReturnInput(portfolio_weights_shifted_one_period_later, assets_returns)
+assets_all_in_weights = __all_in_weights(assets_returns)
+
+weights_assets_strategies_weights_shifted_on_period = pl.concat([assets_all_in_weights, portfolio_weights_shifted_one_period_later])
+
+portfolio_strategies_return_input = portfolio_strategies.PortfolioReturnInput(weights_assets_strategies_weights_shifted_on_period, assets_returns)
 
 # Apply portfolio strategies
 apply_investment = portfolio_strategies.PortfolioReturnCalculator(portfolio_strategies_return_input)
+
 # Finding portfolio value for all in on the active portfolio strategies
-## Balancing methods
-mv_balancing = apply_investment.all_in_strategy_returns(InvestmentStrategyPortfolios.MV)
-global_mv_balancing = apply_investment.all_in_strategy_returns(InvestmentStrategyPortfolios.GlobalMV)
-risk_parity_balancing = apply_investment.all_in_strategy_returns(InvestmentStrategyPortfolios.RP)
-max_return_balancing = apply_investment.all_in_strategy_returns(InvestmentStrategyPortfolios.MaxReturn)
+## Run strategies and all in on assets
+returns_mv = apply_investment.all_in_strategy_returns(InvestmentStrategyPortfolios.MV, 100)
+returns_gmv = apply_investment.all_in_strategy_returns(InvestmentStrategyPortfolios.GlobalMV, 100)
+returns_rp = apply_investment.all_in_strategy_returns(InvestmentStrategyPortfolios.RP, 100)
+max_return_balancing = apply_investment.all_in_strategy_returns(InvestmentStrategyPortfolios.MaxReturn, 100)
+returns_max_return = apply_investment.all_in_strategy_returns(InvestmentStrategyPortfolios.MarketUs, 100)
 
-## Initial weights and values
-initial_weight_mv = {InvestmentStrategyPortfolios.MV: 1}
-initial_value_mv = {InvestmentStrategyPortfolios.MV: 100}
+returns_all_in_asset = pl.DataFrame(schema=portfolio_strategies.schema_portfolio_values)
+for asset in assets:
+    return_asset = apply_investment.all_in_strategy_returns(asset, 100)
+    returns_all_in_asset.extend(return_asset)
 
-initial_weight_gmv = {InvestmentStrategyPortfolios.GlobalMV: 1}
-initial_value_gmv = {InvestmentStrategyPortfolios.GlobalMV: 100}
-
-initial_weight_rp = {InvestmentStrategyPortfolios.RP: 1}
-initial_value_rp = {InvestmentStrategyPortfolios.RP: 100}
-
-initial_weight_max_return = {InvestmentStrategyPortfolios.MaxReturn: 1}
-initial_value_max_return = {InvestmentStrategyPortfolios.MaxReturn: 100}
-## Run strategy
-returns_mv = apply_investment.portfolio_values(InvestmentStrategyPortfolios.MV.value, initial_weight_mv, initial_value_mv, mv_balancing)
-returns_gmv = apply_investment.portfolio_values(InvestmentStrategyPortfolios.GlobalMV.value, initial_weight_gmv, initial_value_gmv, global_mv_balancing)
-returns_rp = apply_investment.portfolio_values(InvestmentStrategyPortfolios.RP.value, initial_weight_rp, initial_value_rp, risk_parity_balancing)
-returns_max_return = apply_investment.portfolio_values(InvestmentStrategyPortfolios.MaxReturn.value, initial_weight_max_return, initial_value_max_return, max_return_balancing)
-
-returns_active_portfolio = pl.concat([returns_mv, returns_gmv, returns_rp, returns_max_return])
+returns_active_portfolio = pl.concat(
+    [returns_all_in_asset, returns_mv, returns_gmv, returns_rp, returns_max_return]
+).sort(
+    ["Portfolio name", "TIME_PERIOD"]
+)
 px.line(returns_active_portfolio, x = "TIME_PERIOD", y = "Value", color = "Portfolio name").show()
 # Weights
 px.line(

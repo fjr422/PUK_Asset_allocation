@@ -10,6 +10,7 @@ from enums import BasePortfolios6, PortFolioRegion, InvestmentStrategyPortfolios
 
 schema_portfolio_weights = {"TIME_PERIOD": pl.Date, "Portfolio": PortFolioRegion, "Portfolio strategy": InvestmentStrategyPortfolios, "Weight": pl.Float64}
 schema_asset_returns = {"TIME_PERIOD": pl.Date, "Portfolio": PortFolioRegion, "Return": pl.Float64}
+schema_portfolio_values = {"TIME_PERIOD": pl.Date, "Value": pl.Float64, "Portfolio name": pl.String}
 
 class PortfolioStrategy:
     """Get methods for implementing different active portfolio strategies for a list of portfolio names."""
@@ -408,13 +409,7 @@ class PortfolioReturnCalculator:
             ["Portfolio strategy", "TIME_PERIOD"]
         )
 
-    def all_in_strategy_returns(self, investment_strategy_portfolio: InvestmentStrategyPortfolios) -> Callable[[dict[str, float], dict[InvestmentStrategyPortfolios, float], dict[InvestmentStrategyPortfolios, float]], tuple[dict[InvestmentStrategyPortfolios, float], dict[InvestmentStrategyPortfolios, float]]]:
-        """Strategy going all in on one asset."""
-        def balancing(returns: dict[str, float], weights: dict[InvestmentStrategyPortfolios, float], initial_values: dict[InvestmentStrategyPortfolios, float]) -> tuple[dict[InvestmentStrategyPortfolios, float], dict[InvestmentStrategyPortfolios, float]]:
-            value = {investment_strategy_portfolio: initial_values[investment_strategy_portfolio] * weights[investment_strategy_portfolio] * (1 + returns[investment_strategy_portfolio.value])}
-            weights = {investment_strategy_portfolio: 1}
-            return weights, value
-        return balancing
+
 
     def portfolio_values(self, portfolio_name: str, initial_weights: dict[InvestmentStrategyPortfolios, float], initial_values: dict[InvestmentStrategyPortfolios, float], balancing_method: Callable[[dict[str, float], dict[InvestmentStrategyPortfolios, float], dict[InvestmentStrategyPortfolios, float]], tuple[dict[InvestmentStrategyPortfolios, float], dict[InvestmentStrategyPortfolios, float]]], start_period = common_var.portfolios_start_date_pl, start_period_pd = common_var.portfolios_start_date_pd, end_period = common_var.last_tdf_pl):
         """Calculate the value of a portfolio for an investment strategy where balancing at each timepoint."""
@@ -431,7 +426,7 @@ class PortfolioReturnCalculator:
             key = "TIME_PERIOD", named = True, unique = True
         )
 
-        schema_portfolio_values = {"TIME_PERIOD": pl.Date, "Value": pl.Float64, "Portfolio name": pl.String}
+
         portfolio_values_df = pl.DataFrame(schema = schema_portfolio_values)
 
         value_at_inception = sum(initial_values.values())
@@ -458,3 +453,13 @@ class PortfolioReturnCalculator:
         )
 
         return pl.concat([portfolio_values_df, first_value, df_values])
+
+    def all_in_strategy_returns(self, investment_strategy_portfolio: InvestmentStrategyPortfolios, initial_value, start_period = common_var.portfolios_start_date_pl, start_period_pd = common_var.portfolios_start_date_pd, end_period = common_var.last_tdf_pl): # -> Callable[[dict[str, float], dict[InvestmentStrategyPortfolios, float], dict[InvestmentStrategyPortfolios, float]], tuple[dict[InvestmentStrategyPortfolios, float], dict[InvestmentStrategyPortfolios, float]]]:
+        """Strategy going all in on one asset."""
+        def balancing(returns: dict[str, float], weights: dict[InvestmentStrategyPortfolios, float], initial_values: dict[InvestmentStrategyPortfolios, float]) -> tuple[dict[InvestmentStrategyPortfolios, float], dict[InvestmentStrategyPortfolios, float]]:
+            value = {investment_strategy_portfolio: initial_values[investment_strategy_portfolio] * weights[investment_strategy_portfolio] * (1 + returns[investment_strategy_portfolio.value])}
+            weights = {investment_strategy_portfolio: 1}
+            return weights, value
+        initial_weights_dict = {investment_strategy_portfolio: 1}
+        initial_value_dict = {investment_strategy_portfolio: initial_value}
+        return self.portfolio_values(investment_strategy_portfolio.value, initial_weights_dict, initial_value_dict, balancing, start_period, start_period_pd, end_period) #balancing

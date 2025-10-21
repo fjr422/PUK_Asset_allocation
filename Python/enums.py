@@ -143,6 +143,33 @@ class PortFolioRegion(Enum):
     TDF2019_01_31 = 'TDF 2019-01-31'
 
 class InvestmentStrategyPortfolios(Enum):
+    RfEu='{"RF","EU"}'
+    RfUs='{"RF","US"}'
+    SmallCapEu='{"Small Cap","EU"}'
+    SmallCapUs='{"Small Cap","US"}'
+    TechUs='{"Tech Stocks","US"}'
+    TechEu='{"Tech Stocks","EU"}'
+    MarketEu='{"Market_Return","EU"}'
+    MarketUs='{"Market_Return","US"}'
+    SmbEu='{"SMB","EU"}'
+    SmbUs='{"SMB","US"}'
+    HmlEu='{"HML","EU"}'
+    HmlUs='{"HML","US"}'
+    MomEu='{"MOM","EU"}'
+    MomUs='{"MOM","US"}'
+    BigHiPriorEu='{"BIG HiPRIOR","EU"}'
+    BigLoPriorEu='{"BIG LoPRIOR","EU"}'
+    Me1Prior2Eu='{"ME1 PRIOR2","EU"}'
+    Me2Prior2Eu='{"ME2 PRIOR2","EU"}'
+    SmallHiPriorEu='{"SMALL HiPRIOR","EU"}'
+    SmallLoPriorEu='{"SMALL LoPRIOR","EU"}'
+    BigHiPriorUs='{"BIG HiPRIOR","US"}'
+    BigLoPriorUs='{"BIG LoPRIOR","US"}'
+    Me1Prior2Ua='{"ME1 PRIOR2","US"}'
+    Me2Prior2Us='{"ME2 PRIOR2","US"}'
+    SmallHiPriorUs='{"SMALL HiPRIOR","US"}'
+    SmallLoPriorUs='{"SMALL LoPRIOR","US"}'
+
     MV = "MV-portfolio"
     GlobalMV = "Global Minimum Variance portfolio"
     RP = "Risk Parity"
