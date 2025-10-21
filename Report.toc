@@ -1,0 +1,9 @@
+\babel@toc {english}{}\relax 
+\contentsline {section}{Introduction}{2}{section*.2}%
+\contentsline {section}{Recommendations regarding Best Pensions' allocation in their Active Portfolio}{2}{section*.3}%
+\contentsline {subsection}{Comparative Analysis of Factor Models}{3}{section*.4}%
+\contentsline {subsubsection}{Methodology}{3}{section*.5}%
+\contentsline {subsubsection}{USD-based investor investing in US Equity}{4}{section*.6}%
+\contentsline {subsubsection}{EUR-based investor investing in US Equity and EU Equity}{5}{section*.9}%
+\contentsline {subsection}{Preliminary Recommendations}{9}{section*.13}%
+\contentsline {subsubsection}{Restricting the Active Portfolio to no short-selling}{10}{section*.17}%

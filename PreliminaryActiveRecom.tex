@@ -1,0 +1,87 @@
+\subsection{Preliminary Recommendations}
+Since Best Pensions is a EUR-based investor we turn our attention to the 6 explanatory portfolios 
+used in the three-factor models for an EUR-based investor investing in US Equities and EU Equities.
+
+In Table \ref{Summary_Factor_PFs} the summary statistics for 
+the 6 explanatory portfolios and the european risk-free 
+in the period from September 2004 to December 2024 asset are shown.
+
+\input{R/Output/SummaryFactorPFs_format.tex}
+
+We note, that the US Market Excess portfolio has the highest mean return of 0.93\% per month,
+followed by the European MOM portfolio with a mean return of 0.77\% per month.
+The portfolio with the highest median return is the European Market Excess portfolio with a median return of 1.13\% per month.
+
+Thus these could be possible candidates for inclusion in Best Pensions' Active Portfolio.
+
+We also note that both the European SMB portfolio and the US SMB portfolio have very low mean returns of 0.09\% and 0.00\% per month respectively.
+These mean returns are lower than the mean return of the european risk-free asset of 0.09\% per month.
+
+Thus we do not recommend including these two portfolios in Best Pensions' Active Portfolio.
+\newline 
+
+In Figure \ref{fig:CorPlot_Factor_PFs} the correlations of the monthly returns of the 6 explanatory portfolios are visualized.
+
+We notice, that the Market Excess Portfolios are highly correlated, so including both in the 
+Active Portfolio may not provide any diversification benefits.
+
+On the contrary, the US Market Excess portfolio and the European MOM portfolio have a very low correlation.
+
+Thus we would recommend Best Pensions to include the US Market Excess portfolio and the European MOM portfolio 
+in their Active Portfolio.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\textwidth]{R/Output/MKT_MOM_SMB_corplot.pdf}
+    \caption{Correlation plot of monthly returns for the six explanatory portfolios from September 2004 to December 2024.}
+    \label{fig:CorPlot_Factor_PFs}
+\end{figure}
+
+The expected surplus and covariance matrix in this recommended factor portfolio universe, 
+is shown in Table \ref{RecomFactorUniv}.
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{|l|c|cc|}
+  \hline
+    &  & \multicolumn{2}{c|}{\textbf{Covariance Matrix}} \\
+    & \textbf{Expected Monthly Return} & US Market Excess & European MOM \\
+    \hline
+    US Market Excess & 0.93 \% & 17.03 & -4.07 \\
+    European MOM & 0.77 \% & -4.07 & 12.95 \\
+    \hline
+\end{tabular}
+\caption{Expected monthly returns and covariance matrix for the recommended factor portfolio universe from September 2004 to December 2024. }
+\label{RecomFactorUniv}
+\end{table}
+
+
+\subsubsection{Restricting the Active Portfolio to no short-selling}
+The Executive Board of Best Pensions has expressed a no short-selling restriction to the Active Portfolio.
+
+This decision prohibits us from investing in the SMB and MOM portfolios, 
+since these portfolios are formed by taking both long and short positions in stocks.
+
+Instead we introduce the long-only versions of the MOM and SMB portfolios, which only consists of the 
+long portfolios used to form the original SMB and MOM portfolios. 
+We denote the long-only MOM portfolios as Tech Stocks and the long-only SMB portfolios as Small Cap.
+
+
+
+In Table \ref{Summary_Factor_LongOnly_PFs} the summary statistics for the new long-only investment universe 
+are shown. And in figure \ref{fig:CorPlot_Factor_LongOnly_PFs} the correlations of the monthly returns of the 6 long-only portfolios are visualized.
+
+We note, that the portfolio returns are now very correlated. 
+This means that the diversification benefits of including multiple portfolios
+in the Active Portfolio are very limited.
+
+\input{R/Output/SummaryFactorPFs_long_format.tex}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\textwidth]{R/Output/MKT_TECH_SC_corplot.pdf}
+    \caption{Correlation plot of monthly returns for the six long-only portfolios from September 2004 to December 2024.}
+    \label{fig:CorPlot_Factor_LongOnly_PFs}
+\end{figure}
+
+

@@ -10,3 +10,9 @@
 *.fdb_latexmk
 *.fdb_latexmk
 *.pdf
+**/*.pyc
+*.pyc
+Data/zero_cupon_europe.csv
+/Python/__pycache__/data.cpython-313.pyc
+/Python/__pycache__/data.cpython-313.pyc
+R/Data/YieldCurveData.csv
