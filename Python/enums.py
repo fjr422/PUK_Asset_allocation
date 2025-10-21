@@ -175,6 +175,7 @@ class InvestmentStrategyPortfolios(Enum):
     RP = "Risk Parity"
     MaxReturn = "Maximal historical return"
 
+    ShadowReserve = "Shadow Reserve"
     TDF2023_01_31 = 'TDF 2023-01-31'
     TDF2018_01_31 = 'TDF 2018-01-31'
     TDF2017_10_31 = 'TDF 2017-10-31'

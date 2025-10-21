@@ -411,7 +411,7 @@ class PortfolioReturnCalculator:
 
 
 
-    def portfolio_values(self, portfolio_name: str, initial_weights: dict[InvestmentStrategyPortfolios, float], initial_values: dict[InvestmentStrategyPortfolios, float], balancing_method: Callable[[dict[str, float], dict[InvestmentStrategyPortfolios, float], dict[InvestmentStrategyPortfolios, float]], tuple[dict[InvestmentStrategyPortfolios, float], dict[InvestmentStrategyPortfolios, float]]], start_period = common_var.portfolios_start_date_pl, start_period_pd = common_var.portfolios_start_date_pd, end_period = common_var.last_tdf_pl):
+    def portfolio_values(self, portfolio_name: str, initial_weights: dict[InvestmentStrategyPortfolios, float], initial_values: dict[str, float], balancing_method: Callable[[dict[str, float], dict[InvestmentStrategyPortfolios, float], dict[InvestmentStrategyPortfolios, float]], tuple[dict[InvestmentStrategyPortfolios, float], dict[InvestmentStrategyPortfolios, float]]], start_period = common_var.portfolios_start_date_pl, start_period_pd = common_var.portfolios_start_date_pd, end_period = common_var.last_tdf_pl):
         """Calculate the value of a portfolio for an investment strategy where balancing at each timepoint."""
         portfolio_strategies_names = [name.value for name in initial_weights.keys() ]
         time_period_to_investment_strategy_to_return = self.strategy_returns.filter(
@@ -428,8 +428,13 @@ class PortfolioReturnCalculator:
 
 
         portfolio_values_df = pl.DataFrame(schema = schema_portfolio_values)
+# TODO: Fix
+        value_at_inception = pl.from_dict(initial_values).unpivot(
+            variable_name = "Portfolio", value_name= "Value"
+            ).filter(
+                pl.col("Portfolio") != InvestmentStrategyPortfolios.ShadowReserve.value
+            )["Value"].sum()
 
-        value_at_inception = sum(initial_values.values())
         first_value_dict = {"Year": start_period_pd.year, "Month": start_period_pd.month, "Day": start_period_pd.day}
         first_value = pl.from_dict(first_value_dict).with_columns(
             pl.date(pl.col("Year"), pl.col("Month"), pl.col("Day")).cast(pl.Date).alias("TIME_PERIOD"),
@@ -441,7 +446,12 @@ class PortfolioReturnCalculator:
 
         for time_period, returns in time_period_to_investment_strategy_to_return.items():
             initial_weights, initial_values = balancing_method(returns, initial_weights, initial_values)
-            dict_value[str(time_period)] = sum(initial_values.values())
+            dict_value[str(time_period)] = pl.from_dict(
+                initial_values
+            ).unpivot( variable_name= "Portfolio", value_name= "Value"
+            ).filter(
+                pl.col("Portfolio") != InvestmentStrategyPortfolios.ShadowReserve.value
+            )["Value"].sum()
 
         df_values = pl.from_dict(dict_value).unpivot(
             variable_name= "TIME_PERIOD", value_name = "Value"
@@ -461,5 +471,5 @@ class PortfolioReturnCalculator:
             weights = {investment_strategy_portfolio: 1}
             return weights, value
         initial_weights_dict = {investment_strategy_portfolio: 1}
-        initial_value_dict = {investment_strategy_portfolio: initial_value}
+        initial_value_dict = {investment_strategy_portfolio.value: initial_value}
         return self.portfolio_values(investment_strategy_portfolio.value, initial_weights_dict, initial_value_dict, balancing, start_period, start_period_pd, end_period) #balancing
