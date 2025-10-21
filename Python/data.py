@@ -2,6 +2,8 @@ import os
 import polars as pl
 import polars.selectors as cs
 
+import common_var
+
 data_path = os.path.join(os.path.dirname( __file__ ), os.path.pardir, "Data")
 class FamaFrenchPaths:
     ff_research_factors_path = os.path.join(data_path, "F-F_Research_Data_Factors.csv")
@@ -65,7 +67,8 @@ class FamaFrenchInput:
         self.ff_research_factors = pl.read_csv(fama_french_paths.ff_research_factors_path, has_header=True, schema={"DateID": pl.String, "Mkt_RF": pl.Float64, "SMB": pl.Float64, "HML": pl.Float64, "RF": pl.Float64}
                                                ).rename({"DateID": "TIME_PERIOD"}
                                                  ).with_columns((pl.col("TIME_PERIOD") + "01").str.to_date("%Y%m%d").alias("TIME_PERIOD")
-                                                 ).with_columns(pl.col("TIME_PERIOD").dt.month_end().alias("TIME_PERIOD"))
+                                                 ).with_columns(pl.col("TIME_PERIOD").dt.month_end().alias("TIME_PERIOD")
+                                                 ).filter(pl.col("TIME_PERIOD") >= common_var.assets_start_date_pl)
         # American 6
         __american6_value_weighted_returns = pl.read_csv(fama_french_paths.american6_value_weighted_returns_path, has_header=True, null_values=["-999", "-99.99"], schema_overrides={"DateID":pl.String}).unpivot(cs.numeric(), index="DateID", variable_name="Portfolio", value_name="weighted_return")
         __american6_Avg_FirmSize = pl.read_csv(fama_french_paths.american6_Avg_FirmSize_firms_path, has_header=True, null_values=["-999", "-99.99"], schema_overrides={"DateID":pl.String}).unpivot(cs.numeric(), index="DateID", variable_name="Portfolio", value_name="Avg_FirmSize")
@@ -102,7 +105,7 @@ class FamaFrenchInput:
                                                 ).rename({"DateID": "TIME_PERIOD"}
                                                 ).with_columns((pl.col("TIME_PERIOD") + "01").str.to_date("%Y%m%d").alias("TIME_PERIOD")
                                                 ).with_columns(pl.col("TIME_PERIOD").dt.month_end().alias("TIME_PERIOD")
-                                                ).filter(pl.col("TIME_PERIOD") >= pl.date(year=2004, month = 8, day = 30)
+                                                ).filter(pl.col("TIME_PERIOD") >= common_var.assets_start_date_pl
                                                 ).rename({"weighted_return": "Return_USD"}
                                                 ).sort(["TIME_PERIOD","N_Portfolios", "Region", "Portfolio"])
 
@@ -114,6 +117,7 @@ class YieldCurveInput:
 
         self.yield_curve_params = __yield_curve_pivot.pivot("DATA_TYPE_FM", index = "TIME_PERIOD", values = "OBS_VALUE"
                                                             ).with_columns(pl.when(pl.col("TIME_PERIOD") == pl.date(year = 2004, month = 9, day = 6)).then(pl.date(year = 2004, month = 8, day = 31)).otherwise(pl.col("TIME_PERIOD")).alias("TIME_PERIOD")
+                                                            ).filter(pl.col("TIME_PERIOD") >= common_var.assets_start_date_pl
                                                             ).sort(pl.col("TIME_PERIOD"), descending=False
                                                             ).group_by((pl.col("TIME_PERIOD").dt.year().alias("Year"), pl.col("TIME_PERIOD").dt.month().alias("Month"))
                                                             ).tail(n = 1

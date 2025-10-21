@@ -5,6 +5,7 @@ import polars as pl
 import numpy as np
 from scipy.optimize import minimize
 
+import common_var
 from enums import BasePortfolios6, PortFolioRegion, InvestmentStrategyPortfolios
 
 schema_portfolio_weights = {"TIME_PERIOD": pl.Date, "Portfolio": PortFolioRegion, "Portfolio strategy": InvestmentStrategyPortfolios, "Weight": pl.Float64}
@@ -231,7 +232,7 @@ class PortfolioStrategy:
         )
         return df
 
-    def running_optimal_portfolio_strategies(self, window_size: int, asset_names: tuple, dates_efficient_frontier: pl.DataFrame, stop_date: pl.Date):
+    def running_optimal_portfolio_strategies(self, window_size: int, asset_names: tuple, dates_efficient_frontier: pl.DataFrame, stop_date: pl.date):
         """Find the optimal portfolio weights for the following investment strategies:
             * Mean-variance: weights between 0 and 1
             * Mean-variance: weights unconstrained
@@ -264,7 +265,6 @@ class PortfolioStrategy:
         ).sort(
             ["TIME_PERIOD"], descending=False
         )
-
 
         # Getting returns. Order is portfolio_IDs.
         include_rf = PortFolioRegion.RfEu.value in asset_names
@@ -321,53 +321,53 @@ class PortfolioStrategy:
             optimized_weights.extend(investment_strategies)
 
             # Efficient_frontier when relevant
-            if not dates_efficient_frontier.filter(pl.col("Date") == time_period).is_empty():
+            if not dates_efficient_frontier.is_empty():
+                if not dates_efficient_frontier.filter(pl.col("Date") == time_period).is_empty():
+                    if include_rf:
+                        mu_max = mu_e.max()
+                        mu_plot = np.insert(mu_e, index_rf, 0)
+                    else:
+                        mu_max = mu.max()
+                        mu_plot = mu.copy()
 
-                if include_rf:
-                    mu_max = mu_e.max()
-                    mu_plot = np.insert(mu_e, index_rf, 0)
-                else:
-                    mu_max = mu.max()
-                    mu_plot = mu.copy()
+                    efficient_frontier_bounded_data = self.__efficient_frontier(mu, mu_e, var_matrix, var_matrix_e, global_minimum_variance["Historical return"].min(), mu_max, asset_names, include_rf, index_rf)
 
-                efficient_frontier_bounded_data = self.__efficient_frontier(mu, mu_e, var_matrix, var_matrix_e, global_minimum_variance["Historical return"].min(), mu_max, asset_names, include_rf, index_rf)
+                    efficient_frontier_bounded = efficient_frontier_bounded_data.with_columns(
+                        pl.lit("l").alias("Type"),
+                        pl.lit(PortFolioRegion.BoundedEfficientFrontier).alias("Portfolio"),
+                        pl.lit(time_period).alias("TIME_PERIOD")
+                    ).rename(
+                        {"Return": "Historical return", "Variance": "Historical variance"}
+                    ).cast(
+                        {"Portfolio": PortFolioRegion}
+                    ).select(efficient_frontier_schema.keys())
 
-                efficient_frontier_bounded = efficient_frontier_bounded_data.with_columns(
-                    pl.lit("l").alias("Type"),
-                    pl.lit(PortFolioRegion.BoundedEfficientFrontier).alias("Portfolio"),
-                    pl.lit(time_period).alias("TIME_PERIOD")
-                ).rename(
-                    {"Return": "Historical return", "Variance": "Historical variance"}
-                ).cast(
-                    {"Portfolio": PortFolioRegion}
-                ).select(efficient_frontier_schema.keys())
+                    portfolios_frontier = pl.DataFrame(
+                        {"Portfolio": asset_names, "Historical return": mu_plot, "Historical variance": var_matrix.diagonal()}
+                    ).with_columns(
+                        pl.lit("p").alias("Type"),
+                        pl.lit(time_period).alias("TIME_PERIOD")
+                    ).cast(
+                        {"Portfolio": PortFolioRegion}
+                    ).select(efficient_frontier_schema.keys())
 
-                portfolios_frontier = pl.DataFrame(
-                    {"Portfolio": asset_names, "Historical return": mu_plot, "Historical variance": var_matrix.diagonal()}
-                ).with_columns(
-                    pl.lit("p").alias("Type"),
-                    pl.lit(time_period).alias("TIME_PERIOD")
-                ).cast(
-                    {"Portfolio": PortFolioRegion}
-                ).select(efficient_frontier_schema.keys())
+                    investment_strategies_frontier = investment_strategies.with_columns(
+                        pl.col("Portfolio strategy").alias("Portfolio")
+                    ).group_by(
+                        ["TIME_PERIOD", "Portfolio"]
+                    ).agg(
+                        pl.first("Historical return"),
+                         pl.first("Historical variance")
+                    ).with_columns(
+                        pl.lit("p").alias("Type")
+                    ).cast(
+                        {"Portfolio": PortFolioRegion}
+                    ).select(efficient_frontier_schema.keys())
 
-                investment_strategies_frontier = investment_strategies.with_columns(
-                    pl.col("Portfolio strategy").alias("Portfolio")
-                ).group_by(
-                    ["TIME_PERIOD", "Portfolio"]
-                ).agg(
-                    pl.first("Historical return"),
-                     pl.first("Historical variance")
-                ).with_columns(
-                    pl.lit("p").alias("Type")
-                ).cast(
-                    {"Portfolio": PortFolioRegion}
-                ).select(efficient_frontier_schema.keys())
-
-                efficient_frontier_time = pl.concat([portfolios_frontier, efficient_frontier_bounded, investment_strategies_frontier])
-                efficient_frontier.extend(
-                    efficient_frontier_time
-                )
+                    efficient_frontier_time = pl.concat([portfolios_frontier, efficient_frontier_bounded, investment_strategies_frontier])
+                    efficient_frontier.extend(
+                        efficient_frontier_time
+                    )
 
         return {"Optimal strategies": optimized_weights, "Efficient frontier": efficient_frontier}
 
@@ -407,17 +407,23 @@ class PortfolioReturnCalculator:
         ).sort(
             ["Portfolio strategy", "TIME_PERIOD"]
         )
-    def all_in_strategy_returns(self, investment_strategy_portfolio: InvestmentStrategyPortfolios) -> Callable[[dict[str, float], dict[InvestmentStrategyPortfolios, float], float], tuple[dict[InvestmentStrategyPortfolios, float], float]]:
+
+    def all_in_strategy_returns(self, investment_strategy_portfolio: InvestmentStrategyPortfolios) -> Callable[[dict[str, float], dict[InvestmentStrategyPortfolios, float], dict[InvestmentStrategyPortfolios, float]], tuple[dict[InvestmentStrategyPortfolios, float], dict[InvestmentStrategyPortfolios, float]]]:
         """Strategy going all in on one asset."""
-        def balancing(returns: dict[str, float], weights: dict[InvestmentStrategyPortfolios, float], initial_value: float) -> tuple[dict[InvestmentStrategyPortfolios, float], float]:
-            value = initial_value * weights[investment_strategy_portfolio] * (1 + returns[investment_strategy_portfolio.value])
+        def balancing(returns: dict[str, float], weights: dict[InvestmentStrategyPortfolios, float], initial_values: dict[InvestmentStrategyPortfolios, float]) -> tuple[dict[InvestmentStrategyPortfolios, float], dict[InvestmentStrategyPortfolios, float]]:
+            value = {investment_strategy_portfolio: initial_values[investment_strategy_portfolio] * weights[investment_strategy_portfolio] * (1 + returns[investment_strategy_portfolio.value])}
             weights = {investment_strategy_portfolio: 1}
             return weights, value
         return balancing
 
-    def portfolio_values(self, portfolio_name: str, initial_value: float, initial_weights: dict[InvestmentStrategyPortfolios, float], balancing_method: Callable[[dict[str, float], dict[InvestmentStrategyPortfolios, float], float], tuple[dict[InvestmentStrategyPortfolios, float], float]]):
+    def portfolio_values(self, portfolio_name: str, initial_weights: dict[InvestmentStrategyPortfolios, float], initial_values: dict[InvestmentStrategyPortfolios, float], balancing_method: Callable[[dict[str, float], dict[InvestmentStrategyPortfolios, float], dict[InvestmentStrategyPortfolios, float]], tuple[dict[InvestmentStrategyPortfolios, float], dict[InvestmentStrategyPortfolios, float]]], start_period = common_var.portfolios_start_date_pl, start_period_pd = common_var.portfolios_start_date_pd, end_period = common_var.last_tdf_pl):
         """Calculate the value of a portfolio for an investment strategy where balancing at each timepoint."""
-        time_period_to_investment_strategy_to_return = self.strategy_returns.pivot(
+        portfolio_strategies_names = [name.value for name in initial_weights.keys() ]
+        time_period_to_investment_strategy_to_return = self.strategy_returns.filter(
+            pl.col("Portfolio strategy").is_in(portfolio_strategies_names),
+        ).filter(
+            (pl.col("TIME_PERIOD") > start_period) & (pl.col("TIME_PERIOD") <= end_period)
+        ).pivot(
             index = "TIME_PERIOD", values = "Return", on = "Portfolio strategy"
         ).sort(
             "TIME_PERIOD"
@@ -428,10 +434,19 @@ class PortfolioReturnCalculator:
         schema_portfolio_values = {"TIME_PERIOD": pl.Date, "Value": pl.Float64, "Portfolio name": pl.String}
         portfolio_values_df = pl.DataFrame(schema = schema_portfolio_values)
 
-        dict_value = {}
+        value_at_inception = sum(initial_values.values())
+        first_value_dict = {"Year": start_period_pd.year, "Month": start_period_pd.month, "Day": start_period_pd.day}
+        first_value = pl.from_dict(first_value_dict).with_columns(
+            pl.date(pl.col("Year"), pl.col("Month"), pl.col("Day")).cast(pl.Date).alias("TIME_PERIOD"),
+            pl.lit(value_at_inception).cast(pl.Float64).alias("Value"),
+            pl.lit(portfolio_name).cast(pl.String).alias("Portfolio name"),
+        ).select(schema_portfolio_values.keys())
+
+        dict_value = dict()
+
         for time_period, returns in time_period_to_investment_strategy_to_return.items():
-            initial_weights, initial_value = balancing_method(returns, initial_weights, initial_value)
-            dict_value[str(time_period)] = initial_value
+            initial_weights, initial_values = balancing_method(returns, initial_weights, initial_values)
+            dict_value[str(time_period)] = sum(initial_values.values())
 
         df_values = pl.from_dict(dict_value).unpivot(
             variable_name= "TIME_PERIOD", value_name = "Value"
@@ -441,4 +456,5 @@ class PortfolioReturnCalculator:
         ).select(
             schema_portfolio_values.keys()
         )
-        return pl.concat([portfolio_values_df, df_values])
+
+        return pl.concat([portfolio_values_df, first_value, df_values])

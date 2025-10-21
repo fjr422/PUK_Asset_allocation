@@ -1,4 +1,6 @@
 import polars as pl
+
+import common_var
 import data
 
 # Path
@@ -12,7 +14,7 @@ yield_curve_current = data.YieldCurveInput(yield_curve_paths.zero_cupon_europe)
 exchange_rates = data.ExchangeRates(exchange_rate_paths)
 
 # Creating spot rates
-spot_rates = yield_curve_current.risk_free_rate(10).sort("TIME_PERIOD", descending=False)
+spot_rates = yield_curve_current.risk_free_rate(common_var.years_tdf).sort("TIME_PERIOD", descending=False)
 # RF_eur
 RF_EU = spot_rates.filter(pl.col("TIME_TO_MATURITY") == 1
                         ).with_columns(RF = (pl.col("SPOTRATE") * 1/12).exp() - 1
