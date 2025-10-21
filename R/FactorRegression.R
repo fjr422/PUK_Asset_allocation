@@ -185,7 +185,7 @@ color_factor_tables <- function(data, scales){
 
 
 writeLines(color_factor_tables(round(factors_USD_Based_US,2), c(98, 101.35)),
-           con = "Output/factors_USD_US_colored.tex")
+           con = "R/Output/factors_USD_US_colored.tex")
 
 
 
@@ -194,7 +194,7 @@ round(factors_USD_Based_US, 2)
 print(xtable(factors_USD_Based_US, 
              digits = 2),
       type = "latex", 
-      file = "Output/factors_USD_US.tex")
+      file = "R/Output/factors_USD_US.tex")
 
 
 ## For EUR-based US investor
@@ -316,10 +316,10 @@ round(rbind(cbind(b_EURUS, tb_EURUS),
       cbind(m_EURUS, tm_EURUS), 
       cbind(r2_EURUS, se_EURUS)),2)
 
-print(xtable(factors_EUR_Based_US, digits = 2), type = "latex", file = "Output/factors_EUR_US.tex")
+print(xtable(factors_EUR_Based_US, digits = 2), type = "latex", file = "R/Output/factors_EUR_US.tex")
 
 writeLines(color_factor_tables(round(factors_EUR_Based_US,2), c(98, 101.35)),
-           con = "Output/factors_EUR_US_colored.tex")
+           con = "R/Output/factors_EUR_US_colored.tex")
 
 Intercepts_EURUS <- cbind(matrix(c(summary(LM_EURUS_Size1Mom1)$coefficients["(Intercept)","Estimate"], summary(LM_EURUS_Size1Mom2)$coefficients["(Intercept)","Estimate"], summary(LM_EURUS_Size1Mom3)$coefficients["(Intercept)","Estimate"], summary(LM_EURUS_Size1Mom4)$coefficients["(Intercept)","Estimate"], summary(LM_EURUS_Size1Mom5)$coefficients["(Intercept)","Estimate"],
                                    summary(LM_EURUS_Size2Mom1)$coefficients["(Intercept)","Estimate"], summary(LM_EURUS_Size2Mom2)$coefficients["(Intercept)","Estimate"], summary(LM_EURUS_Size2Mom3)$coefficients["(Intercept)","Estimate"], summary(LM_EURUS_Size2Mom4)$coefficients["(Intercept)","Estimate"], summary(LM_EURUS_Size2Mom5)$coefficients["(Intercept)","Estimate"],
@@ -462,10 +462,10 @@ factors_EUR_Based_EU <- rbind(cbind(b_EUREU, tb_EUREU),
 
 print(xtable(factors_EUR_Based_EU, digits = 2), 
       type = "latex", 
-      file = "Output/factors_EUR_EU.tex")
+      file = "R/Output/factors_EUR_EU.tex")
 
 writeLines(color_factor_tables(round(factors_EUR_Based_EU,2), c(98, 101.35)),
-           con = "Output/factors_EUR_EU_colored.tex")
+           con = "R/Output/factors_EUR_EU_colored.tex")
 
 #The intercepts
 Intercepts_EUREU <- cbind(matrix(c(summary(LM_EUREU_Size1Mom1)$coefficients["(Intercept)","Estimate"], summary(LM_EUREU_Size1Mom2)$coefficients["(Intercept)","Estimate"], summary(LM_EUREU_Size1Mom3)$coefficients["(Intercept)","Estimate"], summary(LM_EUREU_Size1Mom4)$coefficients["(Intercept)","Estimate"], summary(LM_EUREU_Size1Mom5)$coefficients["(Intercept)","Estimate"],
@@ -546,7 +546,7 @@ SummaryFactorPFs %>%
                             "SmallCap_US" = "US Small Cap Excess",
                             "RF_EU" = "Risk-free")) %>%
   xtable(digits = 2) %>% 
-  print(type = "latex", file = "Output/SummaryFactorPFs.tex", include.rownames = FALSE)
+  print(type = "latex", file = "R/Output/SummaryFactorPFs.tex", include.rownames = FALSE)
 
 
 

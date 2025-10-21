@@ -285,4 +285,4 @@ factors_EUR_Based_EU
 
 round(rbind(cbind(MKT_only_r2_EURUS, SM_only_r2_EURUS,r2_EURUS),
       cbind(MKT_EUREU_only_r2_EUREU, SM_only_r2_EUREU, r2_EUREU)),2) %>% 
-  xtable() %>% print(include.rownames=TRUE, file="Output/EUR_R2.tex")
+  xtable() %>% print(include.rownames=TRUE, file="R/Output/EUR_R2.tex")

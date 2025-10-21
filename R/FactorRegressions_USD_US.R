@@ -285,4 +285,4 @@ SM_only_USD_Based_US
 factors_USD_Based_US
 
 
-round(cbind(MKT_only_r2_US25, SM_only_r2_US25, r2_US25),2) %>% xtable() %>% print(include.rownames=TRUE, file = "Output/USD_Based_US_R2.tex")
+round(cbind(MKT_only_r2_US25, SM_only_r2_US25, r2_US25),2) %>% xtable() %>% print(include.rownames=TRUE, file = "R/Output/USD_Based_US_R2.tex")

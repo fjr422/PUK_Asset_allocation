@@ -12,7 +12,11 @@ saveFig <- function(fig, filename, width = 8, height = 4) {
 
 qplot <- ggplot2::qplot
 
-setwd("C:/Users/andre/OneDrive - University of Copenhagen/År 5/Blok 1/Asset Allocation/Exam Project")
+current_dir <- getwd()
+WD <- file.path(current_dir, "..")
+setwd(WD)
+
+  
 
 # Data loading
   #FactorModelData
