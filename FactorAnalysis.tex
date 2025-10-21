@@ -1,0 +1,154 @@
+\subsection{Comparative Analysis of Factor Models}
+
+The Executive Board of Best Pensions has expressed interest in using a more modern factor approach in their asset allocation. 
+This approach was originally introduced by Fama and French in 1993, and risk factors
+have since become a central component of portfolio theory. 
+
+The market that Fama and French considered in their original paper was the US stock market from 1963 to 1991, thus we 
+start by showing that the factor model approach is still relevant in the current market situation, 
+and that the approach also applies to the European market.
+\newline
+
+The Executive Board has shown particular interest in the market factor, the momentum factor, and the size factor.
+The market factor, MKT, suggests that the overall market returns
+affects the returns of individual assets. The momentum factor, MOM, suggests that
+assets which performed well in the past will continue to perform well in the future.
+And the size factor, SMB, suggests that the size of a company affects its returns,
+with smaller companies tending to outperform larger companies.
+\newline
+
+To ensure that the original analysis is not outdated, we perform a comparative 
+analysis of the three factors for the period from September 2004 to December 2024. 
+During this analysis we adopt the methodology developed in the original factor analysis by Fama and French.
+
+Moreover, to ensure that the factor approach is relevant to a European investor, 
+we analyze the relevancy of the three factors in three different market/investor settings: 
+
+\begin{itemize}
+    \item A USD-based investor investing in US Equity.
+    \item A EUR-based investor investing in US Equity. 
+    \item A EUR-based investor investing in European Equity. 
+\end{itemize}
+
+The results of our analysis shows that the three factors are indeed still relevant in all three settings. 
+Since Best Pensions is a EUR-based investor investing in possibly both US and European Equities, 
+it is indeed suitable for Best Pensions to consider these factors in their asset allocation.
+\newline
+
+\subsubsection{Methodology}
+To form our proxies for the risk factors, we divide the markets into 6 portfolios based on size and momentum of the stocks, and use the monthly returns of the portfolios.
+
+The size factor,SMB , is calculated by taking the average return of the 3 portfolios containing the samllest firms and 
+subtracting the average return of the 3 portfolios containing the largest firms at the end of each month.
+The momentum factor, MOM, is calculated by taking the average return of the 2 highest performing portfolios
+and subtracting the average return of the 2 worst performing portfolios.
+The market factor, RM-RF, is calculated as the excess return of the value-weigted market portfolio over the risk-free rate.
+\newline 
+
+We then divide our markets into 25 portfolios based on five size quintiles and five momentum quintiles,
+and perform three linear regressions with the following form to each of the portfolios in the 3 market/investor settings:
+
+\begin{align*}
+    &\text{1.} \hspace{2cm} R(t)-RF(t) = a + b (RM(t)-RF(t)) + e(t) \\
+    &\text{2.} \hspace{2cm} R(t)-RF(t) = a + s SMB(t) + m MOM(t) + e(t) \\
+    &\text{3.} \hspace{2cm} R(t)-RF(t) = a + b (RM(t)-RF(t)) + s SMB(t) + m MOM(t) + e(t) \\
+\end{align*}
+
+Since the data used in this analysis is from the Kenneth R. French Data Library, 
+all of the returns are calculated in USD. 
+
+When considering a EUR-based investors, we therefore need to adjust the returns 
+to account for currency loss or gains, by including the return of the USD/EUR-exchange rate. 
+
+\subsubsection{USD-based investor investing in US Equity}
+In Table \ref{R2_USD_US} the adjusted $R^2$ values from the three regressions are shown.
+From the table we note, that the adjusted $R^2$ values increase significantly when
+including all three factors, indicating that the three-factor model explains the variation in bond returns better 
+than both the MKT only model and the SMB-MOM model. Thus we concentrate on the three-factor model.
+\input{R/Output/USD_Based_US_R2_format.tex}
+\newline
+
+In Table \ref{Factors_USD_US} the regression estimates from the three-factor model 
+for a USD-based investor investing in US Equity is shown. 
+In the colored sections, we have the slopes of the size factor (SMB) 
+and the momentum factor (MOM) for each of the 25 portfolios.
+
+We note that for any fixed momentum quintile,
+the slope of the size factor is decreasing as we move from 
+the portfolios with the smallest sized assets to the portfolios with 
+the largest sized asset.
+
+Similarly, for any fixed size quintile, the slope of the momentum factor is increasing as we move from
+the portfolios with the lowest momentum to the portfolios with the highest momentum. 
+
+From the associated t-statistics, we see that in a single testing framework the factors are statistically significant
+in almost all the portfolios. 
+
+Moreover, we note that the adjusted R-squared values are all very high, meaning that 
+the model explains a lot of the common variation in the portfolio returns.
+
+From this we conclude that the three-factor model is indeed still relevant 
+for a USD-based investor investing in US Equity in the current market.
+
+\input{R/Output/factors_USD_US_colored_format.tex}
+
+
+\newpage
+\subsubsection{EUR-based investor investing in US Equity and EU Equity}
+An EUR-based investor investing in US equities will both be subject to the returns
+of the equities and the returns of the currency exchange rate between USD and EUR.
+
+Moreover, the data from the Kenneth R. French Data Library is all in USD. So the returns on the EU Equities
+has been added some exchange rate gain/loss, which we need to remove. 
+
+To account for the exchange rate returns, we transform the USD returns from the Data Library into EUR returns using the 
+exchange rate returns from the European Central Bank.
+\newline
+
+In Table \ref{R2_EUR} the adjusted $R^2$ values from the three regressions are shown for an EUR-based investor investing in both US Equity and EU Equity.
+We again note, that the adjusted $R^2$ values increase significantly when
+including all three factors, indicating that the three-factor model explains the common variation in the stock returns better than the other two models. 
+We also note, that the adjusted $R^2$ values are close to 1 in most of the portfolios for the three-factor model, yielding that the model is very good at explaining the returns. 
+Thus we again concentrate on the three-factor model.
+\newline
+
+\input{R/Output/EUR_R2_format.tex}
+
+
+In Table \ref{Factors_EUR_US} and Table \ref{Factors_EUR_EU} the regression estimates from the three-factor model 
+for an EUR-based investor investing in respectively US Equities and EU Equities is shown.
+
+\input{R/Output/factors_EUR_US_colored_format.tex}
+
+\input{R/Output/factors_EUR_EU_colored_format.tex}
+
+From the colored sections, we see the same patterns for the slopes of the size factor (SMB) and the momentum factor (MOM)
+as we saw the USD-based investor investing in US Equities. And we again note that the factors are statistically significant in almost all the portfolios.
+
+This truely indicates that the three-factor model is indeed 
+also relevant for en EUR-based investor.
+
+Thus our recommendations regarding the asset allocation in Best Pensions' Active Portfolio
+will be based on the factors from the three-factor model. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,6 +1,6 @@
 %Document details
 \documentclass[titlepage, table]{article}
-\title{Asset Allocation - Overview}    %Fag og opgave nr.
+\title{Asset Allocation - Investment Advice to Best Pensions}    %Fag og opgave nr.
 \author{Anders Bang and Andreas Poulsen (fjr422, zmh741)}
 \date{\today}
 %Dato
@@ -26,6 +26,7 @@
 \usepackage{physics}
 \usepackage{algpseudocode} %pseudocode
 \usepackage{algorithm}
+\usepackage{adjustbox} % to rotate tables
 
 %Set up the page
 \usepackage[top=2.5 cm, bottom= 2.5 cm, textwidth=480 pt]{geometry}
@@ -49,7 +50,7 @@
 
 %Header and footer
 \rhead{\today}                      %Dato
-\chead{Asset Allocation - Overview}                %Fag og nr.
+\chead{Asset Allocation - Investment Advice to Best Pensions}                %Fag og nr.
 \lhead{fjr422, zmh741}                    %Forfatter
 \rfoot{Page \textbf{\thepage}}
 
@@ -100,5 +101,26 @@
 \tableofcontents
 \newpage
 
+\section{Introduction}
+This report provides an extensive analysis of allocation strategies for Best Pensions, 
+a European pension provider with a strong belief in guarantees. 
+Best Pensions offer a series of target date funds, which guarantee the cliets to at 
+least get their invested money back.
+
+Due to recent critique of the company's investment strategy, especially
+their low allocation towards equity, Best Pensions want to explore more modern approaches
+to asset allocation. But they are not willing to deviate from their current product design.
+
+The goal of this report is thus to provide investment advices, which aligns with modern
+portfolio theory, while still ensuring that Best Pensions can honour their guarantees.
+
+
+\section{Recommendations regarding Best Pensions' allocation in their Active Portfolio}
+In the following section, we will provide an extensive analysis of the current stock market situation. 
+Based on this analysis, we will present our recommendations on, how Best Pensions' should allocate the assets in their Active Portfolio.
+
+\include{FactorAnalysis}
+
+\include{PreliminaryActiveRecom}
 
 \end{document}
