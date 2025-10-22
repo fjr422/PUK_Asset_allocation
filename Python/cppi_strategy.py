@@ -18,10 +18,10 @@ tdf_weights = pl.read_csv(portfolio_analysis_paths.tdf_weights_path, try_parse_d
 ## Assets to invest in
 asset_names = (PortFolioRegion.SmallCapUs.value, PortFolioRegion.TechEu.value, PortFolioRegion.MarketEu.value, PortFolioRegion.SmallCapEu.value)
 portfolio_universe = portfolio_strategies.PortfolioStrategy(fama_french_portfolios.filter(pl.col("N_Portfolios") == 6))
-optimal_strategies = portfolio_universe.running_optimal_portfolio_strategies(3 * 12, asset_names, pl.DataFrame({"a": [None]}).clear(), common_var.last_tdf_pl)
+optimal_strategies = portfolio_universe.running_optimal_portfolio_strategies(common_var.out_of_sample_period, asset_names, pl.DataFrame({"a": [None]}).clear(), common_var.last_tdf_pl)
 
 # Selected active strategy
-active_strategy = InvestmentStrategyPortfolios.MV
+active_strategy = InvestmentStrategyPortfolios.Sharpe
 
 ## Apply investment strategy
 reserve_returns = tdf_returns.select(
@@ -74,16 +74,15 @@ reserve_weights_shifted_one_period = tdf_weights.select(
 
 active_reserve_weights_shifted_one_period = pl.concat([active_weights_shifted_one_period, reserve_weights_shifted_one_period])
 
-active_strategy_return_input = portfolio_strategies.PortfolioReturnInput(active_reserve_weights_shifted_one_period, active_reserve_returns)
+active_reserve_strategy_return_input = portfolio_strategies.PortfolioReturnInput(active_reserve_weights_shifted_one_period, active_reserve_returns)
 ## Apply active investment
-apply_investment = portfolio_strategies.PortfolioReturnCalculator(active_strategy_return_input)
+apply_investment = portfolio_strategies.PortfolioReturnCalculator(active_reserve_strategy_return_input)
 
+def __tie_in_strategy(active: InvestmentStrategyPortfolios, reserve: InvestmentStrategyPortfolios, l_target = common_var.l_target, l_trigger = common_var.l_trigger):
 
-def tie_in_strategy(active: InvestmentStrategyPortfolios, reserve: InvestmentStrategyPortfolios, l_target = common_var.l_target, l_trigger = common_var.l_trigger):
-
-    def balancing(returns: dict[str, float], weights: dict[InvestmentStrategyPortfolios, float], initial_values: dict[InvestmentStrategyPortfolios, float]) -> tuple[dict[InvestmentStrategyPortfolios, float], dict[InvestmentStrategyPortfolios, float]]:
-        value_active = initial_values[active] * (1 + returns[active.value])
-        value_reserve = initial_values[reserve] * (1 + returns[reserve.value])
+    def balancing(returns: dict[str, float], weights: dict[InvestmentStrategyPortfolios, float], initial_values: dict[str, float]) -> tuple[dict[InvestmentStrategyPortfolios, float], dict[str, float]]:
+        value_active = initial_values[active.value] * (1 + returns[active.value])
+        value_reserve = initial_values[reserve.value] * (1 + returns[reserve.value])
         new_value = value_active + value_reserve
 
         l = new_value / value_reserve
@@ -94,54 +93,129 @@ def tie_in_strategy(active: InvestmentStrategyPortfolios, reserve: InvestmentStr
         else:
             weights_after_balancing[reserve] = value_reserve / new_value
             weights_after_balancing[active] = value_active / new_value
-        values = {active: new_value * weights_after_balancing[active], reserve: new_value * weights_after_balancing[reserve]}
+
+        values = {active.value: new_value * weights_after_balancing[active], reserve.value: new_value * weights_after_balancing[reserve]}
         return weights_after_balancing, values
     return balancing
 
 
-# Running tdfs
-tdf_runs = tdf_returns.filter(
-    pl.col("TIME_PERIOD") == pl.col("TDF inception date")
-).select(
-    ["TIME_PERIOD", "Portfolio", "ZC"]
-).rows_by_key(key = ["TIME_PERIOD"], named=True, unique = True)
+def tie_in_strategies(l_trigger = common_var.l_trigger, l_target = common_var.l_target, initial_contribution = 100):
+    """Running tie-in strategy."""
+    tdf_runs = tdf_returns.filter(
+        pl.col("TIME_PERIOD") == pl.col("TDF inception date")
+    ).sort(
+        "TIME_PERIOD"
+    ).select(
+        ["TIME_PERIOD", "Portfolio"]
+    ).rows_by_key(key = ["TIME_PERIOD"], named=True, unique = True)
 
-schema_portfolio_values = {"TIME_PERIOD": pl.Date, "Value": pl.Float64, "Portfolio name": pl.String}
-portfolio_values_df = pl.DataFrame(schema = schema_portfolio_values)
+    portfolio_values_df = pl.DataFrame(schema = portfolio_strategies.schema_portfolio_values)
+     # Looping over times
+    for date, portfolio in tdf_runs.items():
+        tdf_strategy = InvestmentStrategyPortfolios(portfolio["Portfolio"])
 
+        initial_value_reserve = initial_contribution * (1 / l_target)
+        initial_value_active = initial_contribution - initial_value_reserve
 
-for date, values in tdf_runs.items():
-    initial_contribution = 100
-    tdf_strategy = InvestmentStrategyPortfolios(values["Portfolio"])
-    zero_coupon = values["ZC"]
+        initial_values_tie_in = dict()
+        initial_values_tie_in[active_strategy.value] = initial_value_active
+        initial_values_tie_in[tdf_strategy.value] = initial_value_reserve
 
-    initial_value_reserve = initial_contribution * (1 / common_var.l_target)
-    initial_value_active = initial_contribution - initial_value_reserve
+        initial_weights_tie_in = dict()
+        initial_weights_tie_in[active_strategy] = 1 - 1 / l_target
+        initial_weights_tie_in[tdf_strategy] = 1 / l_target
 
-    initial_values_tie_in = dict()
-    initial_values_tie_in[active_strategy] = initial_value_active
-    initial_values_tie_in[tdf_strategy] = initial_value_reserve
-
-    initial_weights_tie_in = dict()
-    initial_weights_tie_in[active_strategy] = 1 - 1 / common_var.l_target
-    initial_weights_tie_in[tdf_strategy] = 1 / common_var.l_target
-
-    tie_in_start_pd = pd.Timestamp(date)
-    tie_in_start_pl = pl.date(tie_in_start_pd.year, tie_in_start_pd.month, tie_in_start_pd.day)
-    tie_ind_end_pl = common_var.shift_date_by_months(tie_in_start_pd, common_var.tdf_end_in_months)
-
-
-    values_strategy = apply_investment.portfolio_values("Tie in for " + tdf_strategy.value, initial_weights_tie_in, initial_values_tie_in, tie_in_strategy(active_strategy, tdf_strategy), start_period = tie_in_start_pl, start_period_pd= tie_in_start_pd, end_period= tie_ind_end_pl)
-    portfolio_values_df.extend(values_strategy)
+        tie_in_start_pd = pd.Timestamp(date)
+        tie_in_start_pl = pl.date(tie_in_start_pd.year, tie_in_start_pd.month, tie_in_start_pd.day)
+        tie_ind_end_pl = common_var.shift_date_by_months(tie_in_start_pd, common_var.tdf_end_in_months)
 
 
-px.line(portfolio_values_df, x = "TIME_PERIOD", y = "Value", color = "Portfolio name").show()
-# Testing
-def tdf_():
-    pass
+        values_strategy = apply_investment.portfolio_values("Tie in for " + tdf_strategy.value, initial_weights_tie_in, initial_values_tie_in, __tie_in_strategy(active_strategy, tdf_strategy, l_target = l_target, l_trigger = l_trigger), start_period = tie_in_start_pl, start_period_pd= tie_in_start_pd, end_period= tie_ind_end_pl)
+        portfolio_values_df.extend(values_strategy)
+
+    return portfolio_values_df
+
+
+regular_tie_in = tie_in_strategies().sort(
+    ["Portfolio name", "TIME_PERIOD"], descending = False
+).group_by(
+    "Portfolio name"
+).tail(1)
+higher_tie_in = tie_in_strategies(l_target = 200).sort(
+    ["Portfolio name", "TIME_PERIOD"], descending = False
+).group_by(
+    "Portfolio name"
+).tail(1)
+
+px.histogram(regular_tie_in, x = "Value", title = "Current level of tie in").show()
+px.histogram(higher_tie_in, x = "Value", title = "Higher level of tie in").show()
+
 
 
 # Defining cppi strategy
-def cppi():
-    pass
-t = 1
+def __cppi_strategy(active: InvestmentStrategyPortfolios, reserve: InvestmentStrategyPortfolios, m: float, b = 1.0):
+    def balancing(returns: dict[str, float], weights: dict[InvestmentStrategyPortfolios, float], initial_values: dict[str, float]) -> tuple[dict[InvestmentStrategyPortfolios, float], dict[str, float]]:
+        value_active = initial_values[active.value] * (1 + returns[active.value])
+        value_reserve = initial_values[reserve.value] * (1 + returns[reserve.value])
+        value_shadow_reserve = initial_values[InvestmentStrategyPortfolios.ShadowReserve.value] * (1 + returns[reserve.value])
+
+        wealth = value_active + value_reserve
+        floor = b * value_shadow_reserve
+        cushion = wealth - floor
+        exposure = m * cushion
+
+        weight_active = min(exposure, b * wealth) / wealth
+        weight_reserve = 1 - weight_active
+
+        weights_after_balancing = dict()
+        weights_after_balancing[active] = weight_active
+        weights_after_balancing[reserve] = weight_reserve
+        weights_after_balancing[InvestmentStrategyPortfolios.ShadowReserve] = 1
+
+        values = {active.value: wealth * weights_after_balancing[active], reserve.value: wealth * weights_after_balancing[reserve], InvestmentStrategyPortfolios.ShadowReserve.value: value_shadow_reserve}
+        return weights_after_balancing, values
+    return balancing
+
+def cppi_strategies(m: int, b = 1, l_target = common_var.l_target, initial_contribution = 100):
+    """Running tie-in strategy."""
+    tdf_runs = tdf_returns.filter(
+        pl.col("TIME_PERIOD") == pl.col("TDF inception date")
+    ).select(
+        ["TIME_PERIOD", "Portfolio"]
+    ).rows_by_key(key = ["TIME_PERIOD"], named=True, unique = True)
+
+    portfolio_values_df = pl.DataFrame(schema = portfolio_strategies.schema_portfolio_values)
+     # Looping over times
+    for date, portfolio in tdf_runs.items():
+        tdf_strategy = InvestmentStrategyPortfolios(portfolio["Portfolio"])
+
+        initial_value_reserve = initial_contribution * (1 / l_target)
+        initial_value_active = initial_contribution - initial_value_reserve
+
+        initial_values_cppi = dict()
+        initial_values_cppi[active_strategy.value] = initial_value_active
+        initial_values_cppi[tdf_strategy.value] = initial_value_reserve
+        initial_values_cppi[InvestmentStrategyPortfolios.ShadowReserve.value] = initial_value_reserve
+
+        initial_weights_cppi = dict()
+        initial_weights_cppi[active_strategy] = 1 - 1 / l_target
+        initial_weights_cppi[tdf_strategy] = 1 / l_target
+        initial_weights_cppi[InvestmentStrategyPortfolios.ShadowReserve] = 1
+
+        cppi_start_pd = pd.Timestamp(date)
+        cppi_start_pl = pl.date(cppi_start_pd.year, cppi_start_pd.month, cppi_start_pd.day)
+        cppi_end_pl = common_var.shift_date_by_months(cppi_start_pd, common_var.tdf_end_in_months)
+
+
+        values_strategy = apply_investment.portfolio_values("Tie in for " + tdf_strategy.value, initial_weights_cppi, initial_values_cppi, __cppi_strategy(active_strategy, tdf_strategy, m = m, b=b), start_period = cppi_start_pl, start_period_pd = cppi_start_pd, end_period = cppi_end_pl)
+        portfolio_values_df.extend(values_strategy)
+
+    return portfolio_values_df
+
+cppi_4 = cppi_strategies(4).sort(
+    ["Portfolio name", "TIME_PERIOD"], descending = False
+).group_by(
+    "Portfolio name"
+).tail(1)
+
+px.histogram(cppi_4, x = "Value", title = "CPPI, m = 4").show()

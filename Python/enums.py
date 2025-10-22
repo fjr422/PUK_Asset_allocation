@@ -46,7 +46,7 @@ class PortFolioRegion(Enum):
     SmallLoPriorUs='{"SMALL LoPRIOR","US"}'
 
 
-    MV = "MV-portfolio"
+    Sharpe = "Sharpe-portfolio"
     GlobalMV = "Global Minimum Variance portfolio"
     MaxReturn = "Maximal historical return"
     RP = "Risk Parity"
@@ -170,11 +170,12 @@ class InvestmentStrategyPortfolios(Enum):
     SmallHiPriorUs='{"SMALL HiPRIOR","US"}'
     SmallLoPriorUs='{"SMALL LoPRIOR","US"}'
 
-    MV = "MV-portfolio"
+    Sharpe = "Sharpe-portfolio"
     GlobalMV = "Global Minimum Variance portfolio"
     RP = "Risk Parity"
     MaxReturn = "Maximal historical return"
 
+    ShadowReserve = "Shadow Reserve"
     TDF2023_01_31 = 'TDF 2023-01-31'
     TDF2018_01_31 = 'TDF 2018-01-31'
     TDF2017_10_31 = 'TDF 2017-10-31'
