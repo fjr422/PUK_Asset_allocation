@@ -1,9 +1,8 @@
 packages <- c('tidyverse','reshape2', 'lattice', 'gridExtra', 'xtable', 
-              'splines', 'corrplot', 'kableExtra')
+              'splines', 'corrplot', 'kableExtra', 'stringr')
 
 lapply(packages, require, character.only = TRUE)
 
-require(stringr)
 saveFig <- function(fig, filename, width = 8, height = 4) {
   pdf(filename, width = width, height = height)
   print(fig)

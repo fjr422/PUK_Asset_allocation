@@ -528,8 +528,6 @@ cor(FactorPortfolios %>% select(-c(TIME_PERIOD, RF_EU, MOM_EU, MOM_US, SMB_EU, S
 round(cov(FactorPortfolios %>% select(MKT_US, MOM_EU)),2)
 round(colMeans(FactorPortfolios %>% select(MKT_US, MOM_EU)),2)
 
-round(mean_factorportfolios,4)
-
 summary(FactorPortfolios %>% select(-TIME_PERIOD))
 
 SummaryFactorPFs %>%
