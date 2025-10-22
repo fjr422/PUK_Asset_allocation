@@ -1,7 +1,8 @@
 
 # Data-files from Python
 optimal_portfolio_strategies_return <- read.csv("Data/Active_portfolio/Output/optimal_portfolio_strategies_return.csv")
-optimal_portfolio_strategies_values <- read.csv("Data/Active_portfolio/Output/optimal_portfolio_strategies_values.csv")
+optimal_long_portfolio_strategies_values <- read.csv("Data/Active_portfolio/Output/optimal_long_portfolio_strategies_values.csv")
+optimal_short_portfolio_strategies_values <- read.csv("Data/Active_portfolio/Output/optimal_short_portfolio_strategies_values.csv")
 
 tdf_returns <- read.csv("Data/Active_portfolio/Output/tdf_returns.csv")
 tdf_weights <- read.csv("Data/Active_portfolio/Output/tdf_weights.csv")
@@ -22,6 +23,25 @@ plot_pf_names <- function(name){
          
   )
 }
+
+US_EU_PF_colors <- scale_color_manual(
+  values = c(
+    "European Market" = "#08519C",
+    "European Tech Stocks" = "#3182BD",
+    "European MOM" = "#6BAED6",
+    "European Small Cap Stocks" = "#9ECAE1",
+    "European SMB" = "#C6DBEF",
+    "US Market" = "#99000D",
+    "US Tech Stocks" = "#CB181D",
+    "US MOM" = "#EF3B2C",
+    "US Small Cap Stocks" = "#FB6A4A",
+    "US SMB" = "#FBB4AE",
+    "Risk Parity" = "#008000",
+    "Global Minimum Variance portfolio" = "#00FF00",
+    "Sharpe-portfolio" = "#8AFF8A",
+    "MV-portfolio" = "#8AFF8A"
+  )
+)
 
 # Define region based on portfolio name to use in plots
 region_pf_names <- function(name){
@@ -46,30 +66,24 @@ region_pf_names <- function(name){
 optimal_portfolio_strategies_return %>%
   mutate(Portfolio.name = plot_pf_names(Portfolio.name),
          'Region' = sapply(Portfolio.name, region_pf_names)) %>%
-  ggplot(aes(x = as.Date(TIME_PERIOD), y = Value, color = Portfolio.name, linetype = Region)) +
+  ggplot(aes(x = as.Date(TIME_PERIOD), y = Value, color = Portfolio.name)) +
   geom_line(size = .8) +
   labs(title = "Out-of-Sample Returns of Portfolio Strategies",
        x = "Time Period",
        y = "Return",
        color = "Portfolio Strategy") +
-  scale_linetype_manual(values = c("EU" = "dashed",
-                                   "US" = "longdash",
-                                   "None" = "solid")) + 
-  guides(linetype = FALSE) + theme_bw()
+  US_EU_PF_colors + theme_bw()
 
 optimal_portfolio_strategies_values %>%
   mutate(Portfolio.name = plot_pf_names(Portfolio.name),
          'Region' = sapply(Portfolio.name, region_pf_names)) %>%
-  ggplot(aes(x = as.Date(TIME_PERIOD), y = Value, color = Portfolio.name, linetype = Region)) +
-  geom_line(size = .8) +
+  ggplot(aes(x = as.Date(TIME_PERIOD), y = Value, color = Portfolio.name)) +
+  geom_line(size = 1) +
   labs(title = "Out-of-Sample Returns of Portfolio Strategies",
        x = "Time Period",
        y = "Return",
-       color = "Portfolio Strategy") +
-  scale_linetype_manual(values = c("EU" = "dashed",
-                                   "US" = "longdash",
-                                   "None" = "solid")) + 
-  guides(linetype = FALSE) + theme_bw()
+       color = "Portfolio Strategy") + 
+  US_EU_PF_colors + theme_bw()
 
 
 spot_rates <- read.csv("Data/Input/spot_rates.csv")
@@ -83,7 +97,47 @@ a <- spot_rates %>%
          ZCB_price = exp(-spot/100 * (TIME_TO_MATURITY/12))
          )
 
+a %>% ggplot(aes(x = TIME_TO_MATURITY/12, y = ZCB_price, color = TIME_PERIOD)) +
+  geom_line() +
+  labs(title = "Zero Coupon Bond Prices over Time to Maturity",
+       x = "Time to Maturity (Months)",
+       y = "ZCB Price",
+       color = "Date") +
+  xlim(10,0) + 
+  theme_bw() + guides(color = FALSE)
 
 
+Plot_ReturnsOfLongOnly <- optimal_long_portfolio_strategies_values %>%
+  filter(!(Portfolio.name %in% c('Global Minimum Variance portfolio',
+                                   'Risk Parity',
+                                   'Sharpe-portfolio'))) %>% 
+  mutate(Portfolio.name = plot_pf_names(Portfolio.name),
+         'Region' = sapply(Portfolio.name, region_pf_names)) %>%
+  ggplot(aes(x = as.Date(TIME_PERIOD), y = Value, color = Portfolio.name)) +
+  geom_line(size = .6) +
+  labs(title = "Historic returns of the Long-Only Portfolios",
+       x = "Time Period",
+       y = "Portfolio Value",
+       color = "Portfolio") +
+ US_EU_PF_colors + theme_bw()
+
+saveFig(Plot_ReturnsOfLongOnly, "R/Output/Plot_ReturnsOfLongOnly.pdf", 8, 5)
+
+
+Plot_ReturnsOfShortAndMarket <- optimal_short_portfolio_strategies_values %>%
+  filter(!(Portfolio.name %in% c('Global Minimum Variance portfolio',
+                                 'Risk Parity',
+                                 'Sharpe-portfolio'))) %>% 
+  mutate(Portfolio.name = plot_pf_names(Portfolio.name),
+         'Region' = sapply(Portfolio.name, region_pf_names)) %>%
+  ggplot(aes(x = as.Date(TIME_PERIOD), y = Value, color = Portfolio.name)) +
+  geom_line(size = .6) +
+  labs(title = "Historic returns of the Short Portfolios (incl. Market)",
+       x = "Time Period",
+       y = "Portfolio Value",
+       color = "Portfolio Strategy") +
+  US_EU_PF_colors + theme_bw()
+
+saveFig(Plot_ReturnsOfShortAndMarket, "R/Output/Plot_ReturnsOfShortAndMarket.pdf", 8, 5)
 
 
