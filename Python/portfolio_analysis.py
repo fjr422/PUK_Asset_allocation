@@ -192,16 +192,16 @@ for short_asset in short_assets:
 returns_active_long_portfolio = pl.concat(
     [returns_all_in_long_asset, returns_mv_long, returns_gmv_long, returns_rp_long, returns_max_return_long]
 ).sort(
-    ["Portfolio name", "TIME_PERIOD"]
+    ["Strategy ID", "TIME_PERIOD"]
 )
 returns_active_short_portfolio = pl.concat(
     [returns_all_in_short_asset, returns_mv_short, returns_gmv_short, returns_rp_short, returns_max_return_short]
 ).sort(
-    ["Portfolio name", "TIME_PERIOD"]
+    ["Strategy ID", "TIME_PERIOD"]
 )
 
-px.line(returns_active_long_portfolio, x = "TIME_PERIOD", y = "Value", color = "Portfolio name", title = "Long").show()
-px.line(returns_active_short_portfolio, x = "TIME_PERIOD", y = "Value", color = "Portfolio name", title = "Short").show()
+px.line(returns_active_long_portfolio, x = "TIME_PERIOD", y = "Value", color = "Strategy ID", title = "Long").show()
+px.line(returns_active_short_portfolio, x = "TIME_PERIOD", y = "Value", color = "Strategy ID", title = "Short").show()
 
 # Weights
 px.line(
