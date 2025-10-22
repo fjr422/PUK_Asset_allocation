@@ -78,7 +78,9 @@ class ActiveReserveStrategyAnalysisPaths:
 
     # Output
     cppi_analysis_path = os.path.join(__active_reserve_strategy_folder, "Output", "cppi_analysis.csv")
-    tie_in_analysis_path = os.path.join(__active_reserve_strategy_folder, "Output", "tie_in_analysis.csv")
+    cppi_terminal_values_path = os.path.join(__active_reserve_strategy_folder, "Output", "cppi_terminal_values.csv")
+    tie_in_trigger_analysis_path = os.path.join(__active_reserve_strategy_folder, "Output", "tie_in_trigger_analysis.csv")
+    tie_in_trigger_terminal_values_path = os.path.join(__active_reserve_strategy_folder, "Output", "tie_in_trigger_terminal_values.csv")
 
 class FamaFrenchInput:
     def __init__(self, fama_french_paths):

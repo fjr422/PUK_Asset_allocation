@@ -137,14 +137,14 @@ def tie_in_strategies(l_trigger = common_var.l_trigger, l_target = common_var.l_
 
 
 regular_tie_in = tie_in_strategies().sort(
-    ["Portfolio name", "TIME_PERIOD"], descending = False
+    ["Strategy ID", "TIME_PERIOD"], descending = False
 ).group_by(
-    "Portfolio name"
+    "Strategy ID"
 ).tail(1)
 higher_tie_in = tie_in_strategies(l_target = 200).sort(
-    ["Portfolio name", "TIME_PERIOD"], descending = False
+    ["Strategy ID", "TIME_PERIOD"], descending = False
 ).group_by(
-    "Portfolio name"
+    "Strategy ID"
 ).tail(1)
 
 px.histogram(regular_tie_in, x = "Value", title = "Current level of tie in").show()
@@ -213,9 +213,9 @@ def cppi_strategies(m: int, b = 1, l_target = common_var.l_target, initial_contr
     return portfolio_values_df
 
 cppi_4 = cppi_strategies(4).sort(
-    ["Portfolio name", "TIME_PERIOD"], descending = False
+    ["Strategy ID", "TIME_PERIOD"], descending = False
 ).group_by(
-    "Portfolio name"
+    "Strategy ID"
 ).tail(1)
 
 px.histogram(cppi_4, x = "Value", title = "CPPI, m = 4").show()
