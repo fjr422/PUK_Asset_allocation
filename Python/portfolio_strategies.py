@@ -82,7 +82,7 @@ class PortfolioStrategy:
 
     # A function to compute the expected portfolio return
     @staticmethod
-    def __compute_portfolio_return(w: np.ndarray, mu: np.ndarray[float]) -> float:
+    def __compute_portfolio_return(w: np.ndarray, mu: np.ndarray) -> float:
         """Compute expected surplus return for assets.
         w: weights.
         mu: Expected surplus return for assets."""
@@ -100,7 +100,7 @@ class PortfolioStrategy:
         return portfolio_mean / math.sqrt(portfolio_variance)
 
     # Optimization to maximize Sharpe ratio
-    def __optimize_portfolio_sharpe(self, mu: np.ndarray[float], mu_e: np.ndarray[float], var_matrix: np.ndarray, var_matrix_e: np.ndarray, asset_names: tuple, initial_weights: np.ndarray, include_rf: bool, index_rf: int):
+    def __optimize_portfolio_sharpe(self, mu: np.ndarray[float], mu_e: np.ndarray[float], var_matrix: np.ndarray, var_matrix_e: np.ndarray, asset_names: tuple, include_rf: bool, index_rf: int):
         # Initialize with equal weights
         n_assets = len(asset_names)
 
@@ -195,7 +195,7 @@ class PortfolioStrategy:
         efficient_frontier = pl.DataFrame(schema = frontier_schema)
 
         if include_rf:
-            if (mu_e < 0).all(): # If none is greater than risk free. Then optimal is to be in RF.
+            if (mu_e < 0).all(): # If none is greater than risk-free. Then optimal is to be in RF.
                 return efficient_frontier
 
         range_returns = np.arange(mu_global_minimum_variance, mu_max, 0.01)
@@ -233,7 +233,7 @@ class PortfolioStrategy:
         )
         return df
 
-    def running_optimal_portfolio_strategies(self, window_size: int, asset_names: tuple, dates_efficient_frontier: pl.DataFrame, stop_date: pl.date):
+    def running_optimal_portfolio_strategies(self, window_size: int, asset_names: tuple, dates_efficient_frontier: pl.DataFrame, stop_date: pl.Date):
         """Find the optimal portfolio weights for the following investment strategies:
             * Mean-variance: weights between 0 and 1
             * Mean-variance: weights unconstrained
@@ -242,6 +242,7 @@ class PortfolioStrategy:
             * window_size: size of the sliding window in months.
             * asset_names: Portfolio universe.
             * dates_efficient_frontier: Dates where efficient frontier is extracted.
+            * stop_date: Last date for finding optimal portfolio weights.
         """
         def tuple_except_index(tuple_to_mod: tuple, index_to_exclude: int):
             return tuple_to_mod[:index_to_exclude] + tuple_to_mod[index_to_exclude + 1:]
@@ -307,10 +308,8 @@ class PortfolioStrategy:
             maximal_return = self.__convert_portfolio_to_weight_to_output(maximal_return_dict, mu, mu_e, var_matrix, var_matrix_e, include_rf, index_rf, time_period, InvestmentStrategyPortfolios.MaxReturn, weights_schema)
 
             # Mean-variance optimisation of Sharpe-Ratio
-            gmv_weights = np.array(list(global_minimum_variance_dict.values()))
-
-            mv_bounded_dict = self.__optimize_portfolio_sharpe(mu, mu_e, var_matrix, var_matrix_e, asset_names, gmv_weights, include_rf, index_rf)
-            mv_bounded = self.__convert_portfolio_to_weight_to_output(mv_bounded_dict,mu, mu_e, var_matrix, var_matrix_e, include_rf, index_rf, time_period, InvestmentStrategyPortfolios.MV, weights_schema)
+            mv_bounded_dict = self.__optimize_portfolio_sharpe(mu, mu_e, var_matrix, var_matrix_e, asset_names, include_rf, index_rf)
+            mv_bounded = self.__convert_portfolio_to_weight_to_output(mv_bounded_dict,mu, mu_e, var_matrix, var_matrix_e, include_rf, index_rf, time_period, InvestmentStrategyPortfolios.Sharpe, weights_schema)
 
             # Risk parity
             risk_parity_dict = self.__optimize_risk_parity(var_matrix, asset_names)
@@ -411,8 +410,13 @@ class PortfolioReturnCalculator:
 
 
 
-    def portfolio_values(self, portfolio_name: str, initial_weights: dict[InvestmentStrategyPortfolios, float], initial_values: dict[str, float], balancing_method: Callable[[dict[str, float], dict[InvestmentStrategyPortfolios, float], dict[InvestmentStrategyPortfolios, float]], tuple[dict[InvestmentStrategyPortfolios, float], dict[InvestmentStrategyPortfolios, float]]], start_period = common_var.portfolios_start_date_pl, start_period_pd = common_var.portfolios_start_date_pd, end_period = common_var.last_tdf_pl):
-        """Calculate the value of a portfolio for an investment strategy where balancing at each timepoint."""
+    def portfolio_values(self, portfolio_name: str, initial_weights: dict[InvestmentStrategyPortfolios, float], initial_values: dict[str, float], balancing_method: Callable[[dict[str, float], dict[InvestmentStrategyPortfolios, float], dict[str, float]], tuple[dict[InvestmentStrategyPortfolios, float], dict[str, float]]], start_period = common_var.portfolios_start_date_pl, start_period_pd = common_var.portfolios_start_date_pd, end_period = common_var.last_tdf_pl):
+        """Calculate the value of a portfolio for an investment strategy where balancing at each timepoint.
+            * portfolio_name: The name to be given to the portfolio.
+            * initial_weights: The weights in each portfolio strategy.
+            * initial_values: The values of each portfolio strategy.
+            * balancing_method: A function used to rebalance the portfolio at each time step.
+        """
         portfolio_strategies_names = [name.value for name in initial_weights.keys() ]
         time_period_to_investment_strategy_to_return = self.strategy_returns.filter(
             pl.col("Portfolio strategy").is_in(portfolio_strategies_names),
@@ -428,7 +432,7 @@ class PortfolioReturnCalculator:
 
 
         portfolio_values_df = pl.DataFrame(schema = schema_portfolio_values)
-# TODO: Fix
+
         value_at_inception = pl.from_dict(initial_values).unpivot(
             variable_name = "Portfolio", value_name= "Value"
             ).filter(
@@ -464,12 +468,13 @@ class PortfolioReturnCalculator:
 
         return pl.concat([portfolio_values_df, first_value, df_values])
 
-    def all_in_strategy_returns(self, investment_strategy_portfolio: InvestmentStrategyPortfolios, initial_value, start_period = common_var.portfolios_start_date_pl, start_period_pd = common_var.portfolios_start_date_pd, end_period = common_var.last_tdf_pl): # -> Callable[[dict[str, float], dict[InvestmentStrategyPortfolios, float], dict[InvestmentStrategyPortfolios, float]], tuple[dict[InvestmentStrategyPortfolios, float], dict[InvestmentStrategyPortfolios, float]]]:
+    def all_in_strategy_returns(self, investment_strategy_portfolio: InvestmentStrategyPortfolios, initial_value, start_period = common_var.portfolios_start_date_pl, start_period_pd = common_var.portfolios_start_date_pd, end_period = common_var.last_tdf_pl):
         """Strategy going all in on one asset."""
-        def balancing(returns: dict[str, float], weights: dict[InvestmentStrategyPortfolios, float], initial_values: dict[InvestmentStrategyPortfolios, float]) -> tuple[dict[InvestmentStrategyPortfolios, float], dict[InvestmentStrategyPortfolios, float]]:
-            value = {investment_strategy_portfolio: initial_values[investment_strategy_portfolio] * weights[investment_strategy_portfolio] * (1 + returns[investment_strategy_portfolio.value])}
+        def balancing(returns: dict[str, float], weights: dict[InvestmentStrategyPortfolios, float], initial_values: dict[str, float]) -> tuple[dict[InvestmentStrategyPortfolios, float], dict[str, float]]:
+            value = {investment_strategy_portfolio.value: initial_values[investment_strategy_portfolio.value] * weights[investment_strategy_portfolio] * (1 + returns[investment_strategy_portfolio.value])}
             weights = {investment_strategy_portfolio: 1}
             return weights, value
+
         initial_weights_dict = {investment_strategy_portfolio: 1}
         initial_value_dict = {investment_strategy_portfolio.value: initial_value}
         return self.portfolio_values(investment_strategy_portfolio.value, initial_weights_dict, initial_value_dict, balancing, start_period, start_period_pd, end_period) #balancing

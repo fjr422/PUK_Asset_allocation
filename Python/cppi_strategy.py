@@ -18,10 +18,10 @@ tdf_weights = pl.read_csv(portfolio_analysis_paths.tdf_weights_path, try_parse_d
 ## Assets to invest in
 asset_names = (PortFolioRegion.SmallCapUs.value, PortFolioRegion.TechEu.value, PortFolioRegion.MarketEu.value, PortFolioRegion.SmallCapEu.value)
 portfolio_universe = portfolio_strategies.PortfolioStrategy(fama_french_portfolios.filter(pl.col("N_Portfolios") == 6))
-optimal_strategies = portfolio_universe.running_optimal_portfolio_strategies(3 * 12, asset_names, pl.DataFrame({"a": [None]}).clear(), common_var.last_tdf_pl)
+optimal_strategies = portfolio_universe.running_optimal_portfolio_strategies(common_var.out_of_sample_period, asset_names, pl.DataFrame({"a": [None]}).clear(), common_var.last_tdf_pl)
 
 # Selected active strategy
-active_strategy = InvestmentStrategyPortfolios.MV
+active_strategy = InvestmentStrategyPortfolios.Sharpe
 
 ## Apply investment strategy
 reserve_returns = tdf_returns.select(
@@ -74,9 +74,9 @@ reserve_weights_shifted_one_period = tdf_weights.select(
 
 active_reserve_weights_shifted_one_period = pl.concat([active_weights_shifted_one_period, reserve_weights_shifted_one_period])
 
-active_strategy_return_input = portfolio_strategies.PortfolioReturnInput(active_reserve_weights_shifted_one_period, active_reserve_returns)
+active_reserve_strategy_return_input = portfolio_strategies.PortfolioReturnInput(active_reserve_weights_shifted_one_period, active_reserve_returns)
 ## Apply active investment
-apply_investment = portfolio_strategies.PortfolioReturnCalculator(active_strategy_return_input)
+apply_investment = portfolio_strategies.PortfolioReturnCalculator(active_reserve_strategy_return_input)
 
 def __tie_in_strategy(active: InvestmentStrategyPortfolios, reserve: InvestmentStrategyPortfolios, l_target = common_var.l_target, l_trigger = common_var.l_trigger):
 

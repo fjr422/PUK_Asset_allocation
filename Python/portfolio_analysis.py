@@ -74,8 +74,8 @@ dates_efficient_frontier = pl.DataFrame(
     (pl.date(year = pl.col("Year"), month = pl.col("Month"), day = pl.col("Day"))).dt.month_end().alias("Date")
 )
 # Find the optimal predetermined strategies.
-optimal_strategies_long_assets = portfolio_universe.running_optimal_portfolio_strategies(3 * 12, long_assets_names, dates_efficient_frontier, common_var.last_tdf_pl)
-optimal_strategies_short_assets = portfolio_universe.running_optimal_portfolio_strategies(3 * 12, short_assets_names, dates_efficient_frontier, common_var.last_tdf_pl)
+optimal_strategies_long_assets = portfolio_universe.running_optimal_portfolio_strategies(common_var.out_of_sample_period, long_assets_names, dates_efficient_frontier, common_var.last_tdf_pl)
+optimal_strategies_short_assets = portfolio_universe.running_optimal_portfolio_strategies(common_var.out_of_sample_period, short_assets_names, dates_efficient_frontier, common_var.last_tdf_pl)
 # Efficient frontier plot
 px.scatter(optimal_strategies_long_assets["Efficient frontier"], x = "Historical variance", y = "Historical return", color = "Portfolio", facet_col="TIME_PERIOD").show()
 px.scatter(optimal_strategies_short_assets["Efficient frontier"], x = "Historical variance", y = "Historical return", color = "Portfolio", facet_col="TIME_PERIOD").show()
@@ -165,13 +165,13 @@ apply_investment_short = portfolio_strategies.PortfolioReturnCalculator(short_po
 # Finding portfolio value for all in on the active portfolio strategies
 ## Run strategies and all in on assets
 ### Strategies for long
-returns_mv_long = apply_investment_long.all_in_strategy_returns(InvestmentStrategyPortfolios.MV, 100)
+returns_mv_long = apply_investment_long.all_in_strategy_returns(InvestmentStrategyPortfolios.Sharpe, 100)
 returns_gmv_long = apply_investment_long.all_in_strategy_returns(InvestmentStrategyPortfolios.GlobalMV, 100)
 returns_rp_long = apply_investment_long.all_in_strategy_returns(InvestmentStrategyPortfolios.RP, 100)
 max_return_balancing_long = apply_investment_long.all_in_strategy_returns(InvestmentStrategyPortfolios.MaxReturn, 100)
 returns_max_return_long = apply_investment_long.all_in_strategy_returns(InvestmentStrategyPortfolios.MarketUs, 100)
 ### Strategies for short
-returns_mv_short = apply_investment_short.all_in_strategy_returns(InvestmentStrategyPortfolios.MV, 100)
+returns_mv_short = apply_investment_short.all_in_strategy_returns(InvestmentStrategyPortfolios.Sharpe, 100)
 returns_gmv_short = apply_investment_short.all_in_strategy_returns(InvestmentStrategyPortfolios.GlobalMV, 100)
 returns_rp_short = apply_investment_short.all_in_strategy_returns(InvestmentStrategyPortfolios.RP, 100)
 max_return_balancing_short = apply_investment_short.all_in_strategy_returns(InvestmentStrategyPortfolios.MaxReturn, 100)

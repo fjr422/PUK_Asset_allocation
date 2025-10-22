@@ -46,7 +46,7 @@ class PortFolioRegion(Enum):
     SmallLoPriorUs='{"SMALL LoPRIOR","US"}'
 
 
-    MV = "MV-portfolio"
+    Sharpe = "Sharpe-portfolio"
     GlobalMV = "Global Minimum Variance portfolio"
     MaxReturn = "Maximal historical return"
     RP = "Risk Parity"
@@ -170,7 +170,7 @@ class InvestmentStrategyPortfolios(Enum):
     SmallHiPriorUs='{"SMALL HiPRIOR","US"}'
     SmallLoPriorUs='{"SMALL LoPRIOR","US"}'
 
-    MV = "MV-portfolio"
+    Sharpe = "Sharpe-portfolio"
     GlobalMV = "Global Minimum Variance portfolio"
     RP = "Risk Parity"
     MaxReturn = "Maximal historical return"
