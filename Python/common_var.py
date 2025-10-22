@@ -27,6 +27,8 @@ first_tdf_pl = pl.date(year = first_tdf_pd.year, month = first_tdf_pd.month, day
 last_tdf_pd = pd.Timestamp(year = 2024, month = 12, day = 31)
 last_tdf_pl = pl.date(year = last_tdf_pd.year, month = last_tdf_pd.month, day = last_tdf_pd.day)
 
+# Analysis
+out_of_sample_period = 3 * 12
 
 # Portfolio strategy
 l_trigger = 1.3
