@@ -6,6 +6,7 @@ import plotly.express as px
 
 import common_var
 import data
+import portfolio_analysis
 from enums import *
 import portfolio_strategies
 import active_reserve_strategy
@@ -20,7 +21,7 @@ tdf_returns = pl.read_csv(active_reserve_strategy_analysis_paths.tdf_returns_pat
 tdf_weights = pl.read_csv(active_reserve_strategy_analysis_paths.tdf_weights_path, try_parse_dates=True,  schema_overrides={"TIME_PERIOD": pl.Date, "Portfolio": PortFolioRegion, "Portfolio strategy": InvestmentStrategyPortfolios})
 
 ## Parameters
-asset_names = (PortFolioRegion.SmallCapUs.value, PortFolioRegion.TechEu.value, PortFolioRegion.MarketEu.value, PortFolioRegion.SmallCapEu.value)
+asset_names = tuple([names.value for names in portfolio_analysis.chosen_assets])
 
 portfolio_universe = portfolio_strategies.PortfolioStrategy(fama_french_portfolios.filter(pl.col("N_Portfolios") == 6))
 current_active_reserve_strategy = active_reserve_strategy.ActiveReserveStrategy(asset_names, portfolio_universe, tdf_returns, tdf_weights, InvestmentStrategyPortfolios.RP)
@@ -29,28 +30,30 @@ current_active_reserve_strategy.active_reserve_strategy_return_input.portfolio_w
 current_active_reserve_strategy.active_reserve_strategy_return_input.portfolio_returns.write_csv(active_reserve_strategy_analysis_paths.active_reserve_returns_path)
 
 # Analysis
-schema_runs = {"TIME_PERIOD": pl.Date, "Value": pl.Float64, "Strategy ID": pl.String, "Fund name": InvestmentStrategyPortfolios, "L_target": pl.Float64, "L_trigger": pl.Float64, "m": pl.Float64, "b": pl.Float64}
+schema_runs = {"TIME_PERIOD": pl.Date, "Value": pl.Float64, "Initial guarantee": pl.Float64, "Strategy ID": pl.String, "Fund name": InvestmentStrategyPortfolios, "L_target": pl.Float64, "L_trigger": pl.Float64, "m": pl.Float64, "b": pl.Float64}
 
+# Ranges for CPPI and L_trigger
+running_cppi_m = np.arange(1, 6, 0.1)
 
-running_cppi_m = np.arange(1, 6, 0.05)
-running_l_trigger = np.arange(common_var.l_trigger, 3.0, 0.01)
+l_target = 1.4
+running_l_trigger = np.arange(l_target + 0.05 , l_target + 0.5, 0.025)
 b = 1.0
 
-# Attempting different m for CPPI
-def process_cppi(m):
-    l_target = common_var.l_target
-    return current_active_reserve_strategy.cppi_strategies(float(m), b=b, l_target=l_target).with_columns(
+# Process CPPI strategy
+def process_cppi(m: np.floating, l_trigger: np.floating, l_target: np.floating):
+    return current_active_reserve_strategy.cppi_strategies(m=float(m.round(4)), l_trigger=float(l_trigger.round(4)), l_target=float(l_target.round(4)), b=b).with_columns(
         pl.lit(m).alias("m"),
         pl.lit(b).alias("b"),
         pl.lit(l_target).alias("L_target"),
-        pl.lit(None).cast(pl.Float64).alias("L_trigger")
+        pl.lit(l_trigger).alias("L_trigger")
     ).select(
         schema_runs.keys()
     )
-# Attempting Different l_trigger levels.
+
+# Process tie-in strategy for each L_trigger
 def process_tie_in_trigger(l_trigger):
     l_target = common_var.l_target
-    return current_active_reserve_strategy.tie_in_strategies(l_trigger = l_trigger, l_target = common_var.l_target).with_columns(
+    return current_active_reserve_strategy.tie_in_strategies(l_trigger=l_trigger, l_target=l_target).with_columns(
         pl.lit(None).cast(pl.Float64).alias("m"),
         pl.lit(None).cast(pl.Float64).alias("b"),
         pl.lit(l_target).alias("L_target"),
@@ -59,41 +62,50 @@ def process_tie_in_trigger(l_trigger):
         schema_runs.keys()
     )
 
-# Run CPPI and Tie in parallel
-cppi_runs = pl.DataFrame(schema = schema_runs)
-tie_in_trigger_runs = pl.DataFrame(schema = schema_runs)
+# Initialize empty DataFrames
+cppi_runs = pl.DataFrame(schema=schema_runs)
+tie_in_trigger_runs = pl.DataFrame(schema=schema_runs)
+
+# Function to run in parallel for tie-in trigger processing
+def run_tie_in_trigger(l_trigger):
+    return process_tie_in_trigger(l_trigger)
+
+# Function to run in parallel for CPPI processing
+def run_cppi(m, l_trigger, l_target):
+    return process_cppi(m, l_trigger, l_target = l_target)
+
+# Run all tie-in trigger calculations in parallel
 start = timeit.default_timer()
-# Use ProcessPoolExecutor for parallel processing
 if __name__ == '__main__':
-    # Use ProcessPoolExecutor for parallel processing
     with ProcessPoolExecutor() as executor:
-        # Map the 'm' values
-        results_cppi = list(executor.map(process_cppi, running_cppi_m))
-        results_tie_in_trigger = list(executor.map(process_tie_in_trigger, running_l_trigger))
+        # Map the tie_in_trigger to parallel execution
+        results_tie_in_trigger = list(executor.map(run_tie_in_trigger, running_l_trigger))
 
-    # Combine the results into a single DataFrame
-    cppi_runs_value = pl.concat(results_cppi)
-    tie_in_runs_value = pl.concat(results_tie_in_trigger)
+        # Collect tie-in results into the DataFrame
+        tie_in_runs_value = pl.concat(results_tie_in_trigger)
 
-    # Combine all results
+        # Run all CPPI calculations in parallel
+        cppi_runs_value = pl.DataFrame(schema = schema_runs)
+        for l_trigger in running_l_trigger:
+            cppi_runs_value.extend(pl.concat(executor.map(run_cppi, running_cppi_m, [l_trigger] * len(running_cppi_m))))
+
     cppi_runs = cppi_runs.vstack(cppi_runs_value)
     tie_in_trigger_runs = tie_in_trigger_runs.vstack(tie_in_runs_value)
-
 
 # Combining
 def extract_terminal(df: pl.DataFrame):
     return df.filter(
         pl.col("Fund name") != InvestmentStrategyPortfolios.ShadowReserve
     ).group_by(
-        ["TIME_PERIOD", "Strategy ID", "b", "m", "L_target", "L_trigger"]
+        ["TIME_PERIOD", "Strategy ID", "Initial guarantee", "b", "m", "L_target", "L_trigger"]
     ).agg(
         pl.col("Value").sum()
     ).sort(
-        ["Strategy ID", "b", "m", "L_target", "L_trigger", "TIME_PERIOD"], descending=True
+        ["Strategy ID", "Initial guarantee", "b", "m", "L_target", "L_trigger", "TIME_PERIOD"], descending=True
     ).group_by(
-        ["Strategy ID", "b", "m", "L_target", "L_trigger"]
+        ["Strategy ID", "Initial guarantee", "b", "m", "L_target", "L_trigger"]
     ).head(1).sort(
-        ["Strategy ID", "b", "m", "L_target", "L_trigger"]
+        ["Strategy ID", "Initial guarantee", "b", "m", "L_target", "L_trigger"]
     )
 
 cppi_terminal_values = extract_terminal(cppi_runs)
