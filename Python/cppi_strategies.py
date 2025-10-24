@@ -7,9 +7,8 @@ import data
 active_reserve_strategy_paths = data.ActiveReserveStrategyAnalysisPaths()
 portfolio_analysis_paths = data.PortfolioAnalysisPaths()
 # Input
-cppi_terminal_values = pl.read_csv(active_reserve_strategy_paths.cppi_terminal_values_path, try_parse_dates=True)
-cppi_terminal_values_target_common = pl.read_csv(active_reserve_strategy_paths.cppi_terminal_values_path_target, try_parse_dates=True)
-tie_in_terminal_values = pl.read_csv(active_reserve_strategy_paths.tie_in_trigger_terminal_values_path, try_parse_dates=True)
+cppi_terminal_values = pl.scan_csv(active_reserve_strategy_paths.cppi_terminal_values_base_path + "*.csv", try_parse_dates=True).collect()
+tie_in_terminal_values = pl.scan_csv(active_reserve_strategy_paths.tie_in_terminal_values_base_path + "*.csv", try_parse_dates=True).collect()
 
 # long_values = pl.read_csv(portfolio_analysis_paths.optimal_long_portfolio_strategies_returns_path).with_columns(
 #     pl.lit("Long assets").alias("Universe")
@@ -22,7 +21,7 @@ tie_in_terminal_values = pl.read_csv(active_reserve_strategy_paths.tie_in_trigge
 # )
 #
 # all_values = pl.concat([long_values, short_values, chosen_assets_values])
-# px.line(all_values, x = "TIME_PERIOD", y = "Value", color = "Strategy ID", facet_col = "Universe", title="Values").show()
+# px.line(all_values, x = "TIME_PERIOD", y = "Value", color = "Strategy ID", color = "Universe", title="Values").show()
 #
 # long_weights = pl.read_csv(portfolio_analysis_paths.optimal_portfolio_strategies_long).with_columns(
 #     pl.lit("Long assets").alias("Universe")
@@ -35,74 +34,60 @@ tie_in_terminal_values = pl.read_csv(active_reserve_strategy_paths.tie_in_trigge
 # )
 # all_weights = pl.concat([long_weights, short_weights, chosen_weights])
 #
-# px.line(all_weights, x = "TIME_PERIOD", y = "Weight", color = "Portfolio", facet_col = "Universe", facet_row="Portfolio strategy", title="Weights").show()
+# px.line(all_weights, x = "TIME_PERIOD", y = "Weight", color = "Portfolio", color = "Universe", facet_row="Portfolio strategy", title="Weights").show()
 
+test = tie_in_terminal_values.select(pl.col("L_target").unique())
 
-
-cppi_group_m = cppi_terminal_values.filter(
-    pl.col("L_trigger") == pl.col("L_trigger").min()
-).with_columns(
+cppi_group_m = cppi_terminal_values.with_columns(
     (pl.col("Value") / pl.col("Initial guarantee")).alias("Terminal to initial")
+).filter(
+    pl.col("L_trigger") == pl.col("L_trigger").min().over(["L_target"])
 ).group_by(
-    "m"
+    ["m", "L_target"]
 ).agg(
     pl.col("Terminal to initial").mean().alias("Avg Terminal to initial"),
     pl.col("Terminal to initial").var().sqrt().alias("Sd Terminal to initial"),
     pl.col("Value").mean().alias("Avg value")
 ).with_columns(
-    (pl.col("Avg Terminal to initial") / pl.col("Avg Terminal to initial")).alias("Volatility adjusted Terminal to initial")
-).sort("m")
+    (pl.col("Avg Terminal to initial") / pl.col("Sd Terminal to initial")).alias("Volatility adjusted Terminal to initial")
+).sort(["L_target", "m"])
 
-cppi_group_m_target = cppi_terminal_values_target_common.filter(
-    pl.col("L_trigger") == pl.col("L_trigger").min()
-).with_columns(
-    (pl.col("Value") / pl.col("Initial guarantee")).alias("Terminal to initial")
-).group_by(
-    "m"
-).agg(
-    pl.col("Terminal to initial").mean().alias("Avg Terminal to initial"),
-    pl.col("Terminal to initial").var().sqrt().alias("Sd Terminal to initial"),
-    pl.col("Value").mean().alias("Avg value")
-).with_columns(
-    (pl.col("Avg Terminal to initial") / pl.col("Avg Terminal to initial")).alias("Volatility adjusted Terminal to initial")
-).sort("m")
-
-px.line(cppi_group_m, x = "m", y = "Avg value", title="CPPI m", subtitle="Avg value").show()
-px.line(cppi_group_m_target, x = "m", y = "Avg value", title="CPPI m current target", subtitle="Avg value").show()
-# px.line(cppi_group_m, x = "m", y = "Sd value", title="CPPI m", subtitle="Sd Terminal to initial").show()
-# px.line(cppi_group_m, x = "m", y = "Volatility adjusted", title="CPPI m", subtitle="Volatility adjusted").show()
+px.line(cppi_group_m, x = "m", y = "Avg Terminal to initial", title="CPPI m", subtitle="Avg value", color= "L_target").show()
+px.line(cppi_group_m, x = "m", y = "Sd Terminal to initial", color= "L_target", title="CPPI m", subtitle="Sd Terminal to initial").show()
+px.line(cppi_group_m, x = "m", y = "Volatility adjusted Terminal to initial", color= "L_target", title="CPPI m", subtitle="Volatility adjusted Terminal to initial").show()
 
 
 cppi_group_trigger = cppi_terminal_values.filter(
     pl.col("m").round(1) == 3.0
 ).with_columns(
-    (pl.col("Value") / pl.col("Initial guarantee")).alias("Value")
+    (pl.col("Value") / pl.col("Initial guarantee")).alias("Terminal to initial")
 ).group_by(
-    "L_trigger"
+    ["L_trigger", "L_target"]
 ).agg(
-    pl.col("Value").mean().alias("Avg value"),
-    pl.col("Value").var().sqrt().alias("Sd value"),
+    pl.col("Terminal to initial").mean().alias("Avg Terminal to initial"),
+    pl.col("Terminal to initial").var().sqrt().alias("Sd Terminal to initial"),
 ).with_columns(
-    (pl.col("Avg value") / pl.col("Sd value")).alias("Volatility adjusted")
-).sort("L_trigger")
+    (pl.col("Avg Terminal to initial") / pl.col("Sd Terminal to initial")).alias("Volatility adjusted Terminal to initial")
+).sort(["L_target", "L_trigger"])
 
-px.line(cppi_group_trigger, x = "L_trigger", y = "Avg value", title="CPPI trigger", subtitle="Avg value").show()
-px.line(cppi_group_trigger, x = "L_trigger", y = "Sd value", title="CPPI trigger", subtitle="Sd value").show()
-px.line(cppi_group_trigger, x = "L_trigger", y = "Volatility adjusted", title="CPPI trigger", subtitle="Volatility adjusted").show()
+px.line(cppi_group_trigger, x = "L_trigger", y = "Avg Terminal to initial", color="L_target", title="CPPI trigger", subtitle="Avg Terminal to initial").show()
+px.line(cppi_group_trigger, x = "L_trigger", y = "Sd Terminal to initial", color="L_target",title="CPPI trigger", subtitle="Sd Terminal to initial").show()
+px.line(cppi_group_trigger, x = "L_trigger", y = "Volatility adjusted Terminal to initial", color="L_target", title="CPPI trigger", subtitle="Volatility adjusted Terminal to initial").show()
 
 
 tie_in_terminal_values_group = tie_in_terminal_values.with_columns(
-    (pl.col("Value") / pl.col("Initial guarantee")).alias("Value")
+    (pl.col("Value") / pl.col("Initial guarantee")).alias("Terminal to initial")
 ).group_by(
-    "L_trigger"
+    ["L_trigger", "L_target"]
 ).agg(
-    pl.col("Value").mean().alias("Avg value"),
-    pl.col("Value").var().sqrt().alias("Sd value"),
+    pl.col("Terminal to initial").mean().alias("Avg Terminal to initial"),
+    pl.col("Terminal to initial").var().sqrt().alias("Sd Terminal to initial"),
+    pl.col("Value").mean().alias("Avg value")
 ).with_columns(
-    (pl.col("Avg value") / pl.col("Sd value")).alias("Volatility adjusted")
-).sort("L_trigger")
+    (pl.col("Avg Terminal to initial") / pl.col("Sd Terminal to initial")).alias("Volatility adjusted Terminal to initial")
+).sort(["L_target", "L_trigger"])
 
-px.line(tie_in_terminal_values_group, x = "L_trigger", y = "Avg value", title="Tie in trigger", subtitle="Avg value").show()
-px.line(tie_in_terminal_values_group, x = "L_trigger", y = "Sd value", title="Tie in trigger", subtitle="Sd value").show()
-px.line(tie_in_terminal_values_group, x = "L_trigger", y = "Volatility adjusted", title="Tie in trigger", subtitle="Volatility adjusted").show()
+px.line(tie_in_terminal_values_group, x = "L_trigger", y = "Avg Terminal to initial", color="L_target", title="Tie in trigger", subtitle="Avg Terminal to initial").show()
+px.line(tie_in_terminal_values_group, x = "L_trigger", y = "Sd Terminal to initial", color="L_target", title="Tie in trigger", subtitle="Sd Terminal to initial").show()
+px.line(tie_in_terminal_values_group, x = "L_trigger", y = "Volatility adjusted Terminal to initial", color="L_target", title="Tie in trigger", subtitle="Volatility Terminal to initial").show()
 

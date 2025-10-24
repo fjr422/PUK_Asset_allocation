@@ -210,7 +210,7 @@ class ActiveReserveStrategy:
             cppi_end_pl = common_var.shift_date_by_months(cppi_start_pd, common_var.tdf_end_in_months)
 
 
-            values_strategy = self.apply_investment.portfolio_values("CPPI for " + tdf_strategy.value, initial_weights_cppi, initial_values_cppi, self.__cppi_strategy(self.active_strategy, tdf_strategy, m = m, b=b), start_period = cppi_start_pl, start_period_pd = cppi_start_pd, end_period = cppi_end_pl)
+            values_strategy = self.apply_investment.portfolio_values("CPPI for " + tdf_strategy.value, initial_weights_cppi, initial_values_cppi, self.__cppi_strategy(self.active_strategy, tdf_strategy, m = m, b=b, l_target=l_target, l_trigger=l_trigger), start_period = cppi_start_pl, start_period_pd = cppi_start_pd, end_period = cppi_end_pl)
             portfolio_values_df.extend(values_strategy.with_columns(pl.lit(initial_guarantee).alias("Initial guarantee")))
 
         return portfolio_values_df

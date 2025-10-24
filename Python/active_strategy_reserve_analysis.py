@@ -33,15 +33,15 @@ current_active_reserve_strategy.active_reserve_strategy_return_input.portfolio_r
 schema_runs = {"TIME_PERIOD": pl.Date, "Value": pl.Float64, "Initial guarantee": pl.Float64, "Strategy ID": pl.String, "Fund name": InvestmentStrategyPortfolios, "L_target": pl.Float64, "L_trigger": pl.Float64, "m": pl.Float64, "b": pl.Float64}
 
 # Ranges for CPPI and L_trigger
-running_cppi_m = np.arange(1, 6, 0.1)
+running_cppi_m = np.arange(2, 5, 0.2)
 
-l_target = 1.4
+l_target = 1.67
 running_l_trigger = np.arange(l_target + 0.05 , l_target + 0.5, 0.025)
 b = 1.0
 
 # Process CPPI strategy
-def process_cppi(m: np.floating, l_trigger: np.floating, l_target: np.floating):
-    return current_active_reserve_strategy.cppi_strategies(m=float(m.round(4)), l_trigger=float(l_trigger.round(4)), l_target=float(l_target.round(4)), b=b).with_columns(
+def process_cppi(m: np.floating, l_trigger: np.floating):
+    return current_active_reserve_strategy.cppi_strategies(m=float(m.round(4)), l_trigger=float(l_trigger.round(4)), l_target=l_target, b=b).with_columns(
         pl.lit(m).alias("m"),
         pl.lit(b).alias("b"),
         pl.lit(l_target).alias("L_target"),
@@ -52,7 +52,6 @@ def process_cppi(m: np.floating, l_trigger: np.floating, l_target: np.floating):
 
 # Process tie-in strategy for each L_trigger
 def process_tie_in_trigger(l_trigger):
-    l_target = common_var.l_target
     return current_active_reserve_strategy.tie_in_strategies(l_trigger=l_trigger, l_target=l_target).with_columns(
         pl.lit(None).cast(pl.Float64).alias("m"),
         pl.lit(None).cast(pl.Float64).alias("b"),
@@ -71,8 +70,8 @@ def run_tie_in_trigger(l_trigger):
     return process_tie_in_trigger(l_trigger)
 
 # Function to run in parallel for CPPI processing
-def run_cppi(m, l_trigger, l_target):
-    return process_cppi(m, l_trigger, l_target = l_target)
+def run_cppi(m, l_trigger):
+    return process_cppi(m, l_trigger)
 
 # Run all tie-in trigger calculations in parallel
 start = timeit.default_timer()
@@ -113,10 +112,10 @@ cppi_terminal_values = extract_terminal(cppi_runs)
 tie_in_terminal_values = extract_terminal(tie_in_trigger_runs)
 
 # Output
-cppi_runs.write_csv(active_reserve_strategy_analysis_paths.cppi_analysis_path)
-cppi_terminal_values.write_csv(active_reserve_strategy_analysis_paths.cppi_terminal_values_path)
-tie_in_trigger_runs.write_csv(active_reserve_strategy_analysis_paths.tie_in_trigger_analysis_path)
-tie_in_terminal_values.write_csv(active_reserve_strategy_analysis_paths.tie_in_trigger_terminal_values_path)
+cppi_runs.write_csv(active_reserve_strategy_analysis_paths.cppi_analysis_path(str(l_target)))
+cppi_terminal_values.write_csv(active_reserve_strategy_analysis_paths.cppi_terminal_values_path(str(l_target)))
+tie_in_trigger_runs.write_csv(active_reserve_strategy_analysis_paths.tie_in_trigger_analysis_path(str(l_target)))
+tie_in_terminal_values.write_csv(active_reserve_strategy_analysis_paths.tie_in_trigger_terminal_values_path(str(l_target)))
 
 end = timeit.default_timer()
 print(f"Execution took {end-start} seconds")
