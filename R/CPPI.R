@@ -162,7 +162,7 @@ tdf_returns %>% filter(TIME_TO_MATURITY == 120) %>%
 
 
 ## CPPI with our new ActivePF
-
+# Risk Parity for MKT and TECH (both EU and US)
 
 CPPI_System <- function(Active_PF, L_trigger, L_target, m, T = 10) {
   initial <- 100
@@ -232,7 +232,7 @@ CPPI_System <- function(Active_PF, L_trigger, L_target, m, T = 10) {
 
 
 CPPIm4 <- Current_Active %>% mutate(Return = EU_EQ) %>% select(TIME_PERIOD,Return) %>%
-  CPPI_System(L_trigger = 130, L_target = 125, m = 4.8)
+  CPPI_System(L_trigger = 130, L_target = 125, m = 3)
 
 CPPIm4 %>% ggplot(aes(x = Date, y = W, color = Portfolio)) +
   geom_line() +
@@ -240,4 +240,30 @@ CPPIm4 %>% ggplot(aes(x = Date, y = W, color = Portfolio)) +
        x = "Date",
        y = "Portfolio Value") + guides(color = FALSE) + theme_bw()
 
-CPPIm4$W %>% max()
+CPPIm4 %>% group_by(Portfolio) %>%
+  filter(Date == max(Date)) %>%
+  select(Portfolio, "TerminalW" = W) %>% ggplot(aes(x = TerminalW)) +
+  geom_histogram(fill = "gray77", color = "black", bins = 15) +
+  labs(title = "CPPI (m=4) - Terminal Values",
+       x = "Terminal Value",
+       y = "Frequency") +
+  theme_bw()
+
+CPPIm4 %>% group_by(Portfolio) %>%
+  filter(Date == max(Date)) %>%
+  select(Portfolio, "TerminalW" = W) %>% left_join(
+    CPPIm4 %>%
+      group_by(Portfolio) %>%
+      filter(Date == min(Date)) %>%
+      select(Portfolio, "InitialG" = G),
+    by = "Portfolio"
+  ) %>% mutate(Return = (TerminalW - InitialG)/InitialG) %>%
+  ggplot(aes(x = Return)) + 
+  geom_histogram(fill = "gray77", color = "black", bins = 15) +
+  labs(title = "CPPI (m=4) - Terminal Values over Initial Guarantee",
+       x = "Excess Return over Initial Guarantee",
+       y = "Frequency") +
+  scale_x_continuous(labels = scales::percent) +
+  theme_bw()
+
+
