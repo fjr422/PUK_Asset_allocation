@@ -36,8 +36,6 @@ tie_in_terminal_values = pl.scan_csv(active_reserve_strategy_paths.tie_in_termin
 #
 # px.line(all_weights, x = "TIME_PERIOD", y = "Weight", color = "Portfolio", color = "Universe", facet_row="Portfolio strategy", title="Weights").show()
 
-test = tie_in_terminal_values.select(pl.col("L_target").unique())
-
 cppi_group_m = cppi_terminal_values.with_columns(
     (pl.col("Value") / pl.col("Initial guarantee")).alias("Terminal to initial")
 ).filter(

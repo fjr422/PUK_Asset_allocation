@@ -255,6 +255,7 @@ class PortfolioStrategy:
         return efficient_frontier
 
     def __convert_portfolio_to_weight_to_output(self, portfolio_to_weight: dict, mu: np.ndarray[float], mu_e: np.ndarray[float], var_matrix: np.ndarray, var_matrix_e: np.ndarray, include_rf: bool, index_rf: int, time_period: pl.Date, portfolio_desc: InvestmentStrategyPortfolios, df_schema: dict):
+        """Convert portfolio of sub-portfolios to output format"""
         weights = np.array(list(portfolio_to_weight.values()))
 
         if include_rf:
@@ -275,9 +276,30 @@ class PortfolioStrategy:
         ).unpivot(
             index = ["TIME_PERIOD", "Portfolio strategy", "Historical return", "Historical variance", "Is RF Included"], variable_name = "Portfolio", value_name = "Weight"
         ).cast(
-            {"Portfolio": PortFolioRegion, "Portfolio strategy": InvestmentStrategyPortfolios,}
+            df_schema
         ).select(
-            list(df_schema.keys())
+            df_schema.keys()
+        )
+        return df
+    def __convert_sub_portfolio_to_weight_to_output(self, asset_names: list[str], mu: np.ndarray[float], mu_e: np.ndarray[float], var_matrix: np.ndarray, var_matrix_e: np.ndarray, include_rf: bool, index_rf: int, time_period: pl.Date, df_schema: dict):
+        """Convert sub-portfolio to output format"""
+        if include_rf:
+            mu_portfolio = np.insert(mu_e, index_rf, 0)
+            variance_portfolios = np.insert(np.insert(var_matrix_e, index_rf, 0, axis = 0), index_rf, 0, axis = 1)
+        else:
+            mu_portfolio =  mu
+            variance_portfolios = var_matrix
+
+        df = pl.DataFrame(
+            {"Portfolio strategy": asset_names, "Portfolio": asset_names, "Historical return": mu_portfolio, "Historical variance": variance_portfolios.diagonal()}
+        ).with_columns(
+            pl.lit(include_rf).alias("Is RF Included"),
+            pl.lit(time_period).alias("TIME_PERIOD"),
+            pl.lit(1).alias("Weight"),
+        ).cast(
+            df_schema
+        ).select(
+            df_schema.keys()
         )
         return df
 
@@ -452,8 +474,11 @@ class PortfolioStrategy:
             risk_parity_dict = self.__optimize_risk_parity(var_matrix, var_matrix_e, asset_names_concat, long_assets_length, index_rf, include_short_portfolios)
             risk_parity = self.__convert_portfolio_to_weight_to_output(risk_parity_dict, mu, mu_e, var_matrix, var_matrix_e, include_rf, index_rf, time_period, InvestmentStrategyPortfolios.RP, weights_schema)
 
+            # Individual assets
+            sub_portfolios = self.__convert_sub_portfolio_to_weight_to_output(asset_names_concat, mu, mu_e, var_matrix, var_matrix_e, include_rf, index_rf, time_period, weights_schema)
+
             # Combining and adding
-            investment_strategies = pl.concat([global_minimum_variance, maximal_return, mv_bounded, risk_parity])
+            investment_strategies = pl.concat([global_minimum_variance, maximal_return, mv_bounded, risk_parity, sub_portfolios])
 
             optimized_weights.extend(investment_strategies)
 
@@ -524,7 +549,6 @@ class PortfolioReturnCalculator:
         ).rows_by_key(
             key = "TIME_PERIOD", named = True, unique = True
         )
-
 
         portfolio_values_df = pl.DataFrame(schema = schema_portfolio_values)
 

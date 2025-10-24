@@ -93,6 +93,9 @@ class ActiveReserveStrategyAnalysisPaths:
     cppi_terminal_values_base_path = os.path.join(__active_reserve_strategy_folder, "Output", "cppi_terminal_values")
     tie_in_terminal_values_base_path = os.path.join(__active_reserve_strategy_folder, "Output", "tie_in_trigger_terminal_values")
 
+    current_tie_in_eu_market_analysis_path = os.path.join(__active_reserve_strategy_folder, "Output", "current_tie_in_EU_analysis_Market.csv")
+    current_tie_in_eu_market_terminal_values_path = os.path.join(__active_reserve_strategy_folder, "Output", "current_tie_in_EU_terminal_values.csv")
+
     def cppi_analysis_path(self, target: str):
         return os.path.join(self.__active_reserve_strategy_folder, "Output", "cppi_analysis" + target + ".csv")
     def cppi_terminal_values_path_target(self, target: str):

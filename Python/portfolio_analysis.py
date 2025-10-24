@@ -57,7 +57,6 @@ portfolio_universe = portfolio_strategies.PortfolioStrategy(fama_french_portfoli
 # Investable assets
 long_assets = (PortFolioRegion.TechUs, PortFolioRegion.MarketUs, PortFolioRegion.SmallCapUs, PortFolioRegion.TechEu, PortFolioRegion.MarketEu, PortFolioRegion.SmallCapEu)
 short_assets = (PortFolioRegion.MomEu, PortFolioRegion.MomUs, PortFolioRegion.SmbEu, PortFolioRegion.SmbUs, PortFolioRegion.MarketEu, PortFolioRegion.MarketUs, PortFolioRegion.RfEu)
-chosen_assets = (PortFolioRegion.MarketUs, PortFolioRegion.TechUs, PortFolioRegion.MarketEu, PortFolioRegion.TechEu)
 
 # Dates to make efficient frontier
 dates_efficient_frontier = pl.DataFrame(
@@ -69,7 +68,7 @@ dates_efficient_frontier = pl.DataFrame(
 # Find the optimal predetermined strategies.
 optimal_strategies_long_assets = portfolio_strategies.PortfolioStrategyAnalysis(portfolio_universe, long_assets, dates_efficient_frontier)
 optimal_strategies_short_assets = portfolio_strategies.PortfolioStrategyAnalysis(portfolio_universe, short_assets, dates_efficient_frontier)
-optimal_strategies_chosen_assets = portfolio_strategies.PortfolioStrategyAnalysis(portfolio_universe, chosen_assets, dates_efficient_frontier)
+optimal_strategies_chosen_assets = portfolio_strategies.PortfolioStrategyAnalysis(portfolio_universe, common_var.chosen_assets, dates_efficient_frontier)
 
 
 

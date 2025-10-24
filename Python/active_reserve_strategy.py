@@ -16,32 +16,6 @@ class ActiveReserveStrategy:
         self.portfolio_universe = portfolio_universe
         self.optimal_strategies = self.portfolio_universe.running_optimal_portfolio_strategies(common_var.out_of_sample_period, asset_names, pl.DataFrame({"a": [None]}).clear(), common_var.last_tdf_pl)
 
-        # Dividing by 100 to get proper returns for TDF's
-        reserve_returns = self.tdf_returns.select(
-            ["TIME_PERIOD", "Portfolio", "Return"]
-        ).with_columns(
-            (pl.col("Return") / 100).alias("Return")
-        )
-        # Making returns for selected assets into right format
-        assets_returns = self.portfolio_universe.portfolio_universe_EUR.select(
-            pl.exclude("Return_RF_EU")
-        ).filter(
-            (pl.col("TIME_PERIOD") >= common_var.portfolios_start_date_pl) & (pl.col("TIME_PERIOD") <= common_var.last_tdf_pl)
-        ).filter(
-            pl.col("Portfolio region").cast(PortFolioRegion).is_in(asset_names)
-        ).pivot(
-            index = "TIME_PERIOD", on = ["Portfolio", "Region"], values = "Return_EUR"
-        ).unpivot(
-            index = "TIME_PERIOD", value_name = "Return", variable_name = "Portfolio"
-        ).with_columns(
-            (pl.col("Return") / 100).alias("Return"), # converting to %
-            pl.col("Portfolio").cast(PortFolioRegion)
-        ).select(
-            portfolio_strategies.schema_asset_returns.keys()
-        )
-
-        active_reserve_returns = pl.concat([assets_returns, reserve_returns])
-
         # Shifting the weights one period for assets
         active_weights_shifted_one_period = self.optimal_strategies["Optimal strategies"].select(
             ["TIME_PERIOD", "Portfolio strategy", "Portfolio", "Weight"]
@@ -66,6 +40,34 @@ class ActiveReserveStrategy:
         )
 
         active_reserve_weights_shifted_one_period = pl.concat([active_weights_shifted_one_period, reserve_weights_shifted_one_period])
+
+
+        # Dividing by 100 to get proper returns for TDF's
+        reserve_returns = self.tdf_returns.select(
+            ["TIME_PERIOD", "Portfolio", "Return"]
+        ).with_columns(
+            (pl.col("Return") / 100).alias("Return")
+        )
+        # Making returns for selected assets into right format
+        assets_returns = self.portfolio_universe.portfolio_universe_EUR.select(
+            pl.exclude("Return_RF_EU")
+        ).filter(
+            (pl.col("TIME_PERIOD") >= common_var.portfolios_start_date_pl) & (pl.col("TIME_PERIOD") <= common_var.last_tdf_pl)
+        ).filter(
+            (pl.col("Portfolio region").cast(PortFolioRegion).is_in(asset_names)) & (pl.col("Portfolio region").cast(PortFolioRegion).is_in(active_reserve_weights_shifted_one_period["Portfolio"].unique()))
+        ).pivot(
+            index = "TIME_PERIOD", on = ["Portfolio", "Region"], values = "Return_EUR"
+        ).unpivot(
+            index = "TIME_PERIOD", value_name = "Return", variable_name = "Portfolio"
+        ).with_columns(
+            (pl.col("Return") / 100).alias("Return"), # converting to %
+            pl.col("Portfolio").cast(PortFolioRegion)
+        ).select(
+            portfolio_strategies.schema_asset_returns.keys()
+        )
+
+        active_reserve_returns = pl.concat([assets_returns, reserve_returns])
+
 
         self.active_reserve_strategy_return_input = portfolio_strategies.PortfolioReturnInput(active_reserve_weights_shifted_one_period, active_reserve_returns)
         ## Apply active investment

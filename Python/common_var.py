@@ -1,6 +1,8 @@
 import polars as pl
 import pandas as pd
 
+from enums import *
+
 years_tdf = 10
 tdf_end_in_months = 12 * years_tdf
 
@@ -29,6 +31,7 @@ last_tdf_pl = pl.date(year = last_tdf_pd.year, month = last_tdf_pd.month, day = 
 
 # Analysis
 out_of_sample_period = 3 * 12
+chosen_assets = (PortFolioRegion.MarketUs, PortFolioRegion.TechUs, PortFolioRegion.MarketEu, PortFolioRegion.TechEu)
 
 # Portfolio strategy
 l_trigger = 1.3
