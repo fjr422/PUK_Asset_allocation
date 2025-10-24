@@ -54,15 +54,27 @@ class PortfolioAnalysisPaths:
     __active_portfolio_output_folder = os.path.join(data_path, "Active_portfolio", "Output")
     def __init__(self):
         self.portfolio_universe_path = os.path.join(self.__active_portfolio_input_folder, "portfolio_universe.csv")
-        self.efficient_frontiers = os.path.join(self.__active_portfolio_input_folder, "efficient_frontier.csv")
-        self.optimal_portfolio_strategies = os.path.join(self.__active_portfolio_input_folder, "portfolio_strategies.csv")
         self.tdf_enums_path = os.path.join(self.__active_portfolio_input_folder, "tdf_enums.csv")
+
+
+        self.efficient_frontiers_long = os.path.join(self.__active_portfolio_input_folder, "efficient_frontier_long.csv")
+        self.optimal_portfolio_strategies_long = os.path.join(self.__active_portfolio_input_folder, "portfolio_strategies_long.csv")
+
+
+        self.efficient_frontiers_short = os.path.join(self.__active_portfolio_input_folder, "efficient_frontier_short.csv")
+        self.optimal_portfolio_strategies_short = os.path.join(self.__active_portfolio_input_folder, "portfolio_strategies_short.csv")
+
+
+        self.efficient_frontiers_chosen_assets = os.path.join(self.__active_portfolio_input_folder, "efficient_frontier_chosen_assets.csv")
+        self.optimal_portfolio_strategies_chosen_assets = os.path.join(self.__active_portfolio_input_folder, "portfolio_strategies_chosen_assets.csv")
 
         # Output
         self.tdf_returns_path = os.path.join(self.__active_portfolio_output_folder, "tdf_returns.csv")
         self.tdf_weights_path = os.path.join(self.__active_portfolio_output_folder, "tdf_weights.csv")
+
         self.optimal_long_portfolio_strategies_returns_path = os.path.join(self.__active_portfolio_output_folder, "optimal_long_portfolio_strategies_values.csv")
         self.optimal_short_portfolio_strategies_returns_path = os.path.join(self.__active_portfolio_output_folder, "optimal_short_portfolio_strategies_values.csv")
+        self.optimal_chosen_assets_portfolio_strategies_returns_path = os.path.join(self.__active_portfolio_output_folder, "optimal_chosen_assets_portfolio_strategies_values.csv")
 
 class ActiveReserveStrategyAnalysisPaths:
     __active_reserve_strategy_folder = os.path.join(data_path, "Active_reserve_strategy")

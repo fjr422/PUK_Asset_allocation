@@ -15,81 +15,82 @@ def __all_in_weights(df: pl.DataFrame):
         portfolio_strategies.schema_portfolio_weights.keys()
     )
 
-def create_analysis_data(portfolio_universe: portfolio_strategies.PortfolioStrategy, assets: tuple, dates_efficient_frontier, out_of_sample_period = common_var.out_of_sample_period, last_date = common_var.last_tdf_pl):
-    asset_names = tuple([name.value for name in assets])
-    optimal_strategies = portfolio_universe.running_optimal_portfolio_strategies(out_of_sample_period, asset_names, dates_efficient_frontier, last_date)
-    # Weights and efficient frontier
-    px.line(
-        optimal_strategies["Optimal strategies"], title="Strategies", x = "TIME_PERIOD", y = "Weight", color="Portfolio", facet_row="Portfolio strategy"
-    ).update_yaxes(
-        matches=None, showticklabels=True
-    ).show()
-    px.scatter(optimal_strategies["Efficient frontier"], x = "Historical variance", y = "Historical return", color = "Portfolio", facet_col="TIME_PERIOD").show()
-    # Calculating returns for the investment strategies
-    ## Preparing input based on optimal portfolio strategies
-    assets_returns = portfolio_universe.portfolio_universe_EUR.select(
-        pl.exclude("Return_RF_EU")
-    ).filter(
-        (pl.col("TIME_PERIOD") >= common_var.portfolios_start_date_pl) & (pl.col("TIME_PERIOD") <= common_var.last_tdf_pl)
-    ).filter(
-        pl.col("Portfolio region").cast(PortFolioRegion).is_in(asset_names)
-    ).pivot(
-        index = "TIME_PERIOD", on = ["Portfolio", "Region"], values = "Return_EUR"
-    ).unpivot(
-        index = "TIME_PERIOD", value_name = "Return", variable_name = "Portfolio"
-    ).with_columns(
-        (pl.col("Return") / 100).alias("Return"), # converting to %
-        pl.col("Portfolio").cast(PortFolioRegion)
-    ).select(
-        portfolio_strategies.schema_asset_returns.keys()
-    )
-    ## Weights assets and strategies
-    portfolio_weights_shifted_one_period_later =  optimal_strategies["Optimal strategies"].select(
-                ["TIME_PERIOD", "Portfolio strategy", "Portfolio", "Weight"]
-            ).filter(
-                (pl.col("TIME_PERIOD") >= common_var.portfolios_start_date_pl) & (pl.col("TIME_PERIOD") <= common_var.last_tdf_pl)
-            ).sort(
-                ["Portfolio strategy", "Portfolio", "TIME_PERIOD"]
-            ).with_columns(
-                (pl.col("TIME_PERIOD").shift(-1).over(["Portfolio strategy", "Portfolio"])).alias("TIME_PERIOD"),
-            ).cast(
-                {"Portfolio": PortFolioRegion, "Portfolio strategy": InvestmentStrategyPortfolios}
-            ).select(
-                portfolio_strategies.schema_portfolio_weights.keys()
-            )
-    ### Assets all in weights
-    assets_all_in_weights = __all_in_weights(assets_returns)
-
-    weights_assets_strategies_weights_shifted_on_period = pl.concat([assets_all_in_weights, portfolio_weights_shifted_one_period_later])
-
-    # Init strategies
-    portfolio_strategies_return_input = portfolio_strategies.PortfolioReturnInput(weights_assets_strategies_weights_shifted_on_period, assets_returns)
-
-    # Apply portfolio strategies
-    apply_investment = portfolio_strategies.PortfolioReturnCalculator(portfolio_strategies_return_input)
-
-    # Finding portfolio value for all in on the active portfolio strategies
-    ## Run strategies and all in on assets
-    ### Strategies for long
-    returns_mv = apply_investment.all_in_strategy_returns(InvestmentStrategyPortfolios.Sharpe, 100)
-    returns_gmv = apply_investment.all_in_strategy_returns(InvestmentStrategyPortfolios.GlobalMV, 100)
-    returns_rp = apply_investment.all_in_strategy_returns(InvestmentStrategyPortfolios.RP, 100)
-    returns_max_return = apply_investment.all_in_strategy_returns(InvestmentStrategyPortfolios.MaxReturn, 100)
-
-    returns_all_in_asset = pl.DataFrame(schema=portfolio_strategies.schema_portfolio_values)
-    for asset in assets:
-        return_asset = apply_investment.all_in_strategy_returns(asset, 100)
-        returns_all_in_asset.extend(return_asset)
-
-    # Combining
-    returns_active_portfolio = pl.concat(
-        [returns_all_in_asset, returns_mv, returns_gmv, returns_rp, returns_max_return]
-    ).sort(
-        ["Strategy ID", "TIME_PERIOD"]
-    )
-    px.line(returns_active_portfolio, x = "TIME_PERIOD", y = "Value", color = "Strategy ID").show()
-
-    return optimal_strategies, returns_active_portfolio
+# def create_analysis_data(portfolio_universe: portfolio_strategies.PortfolioStrategy, assets: tuple, dates_efficient_frontier, out_of_sample_period = common_var.out_of_sample_period, last_date = common_var.last_tdf_pl):
+#     asset_names = tuple([name.value for name in assets])
+#     optimal_strategies = portfolio_universe.running_optimal_portfolio_strategies(out_of_sample_period, asset_names, dates_efficient_frontier, last_date)
+#     # Weights and efficient frontier
+#     px.line(
+#         optimal_strategies["Optimal strategies"], title="Strategies", x = "TIME_PERIOD", y = "Weight", color="Portfolio", facet_row="Portfolio strategy"
+#     ).update_yaxes(
+#         matches=None, showticklabels=True
+#     ).show()
+#     px.scatter(optimal_strategies["Efficient frontier"], x = "Historical variance", y = "Historical return", color = "Portfolio", facet_col="TIME_PERIOD").show()
+#     # Calculating returns for the investment strategies
+#     ## Preparing input based on optimal portfolio strategies
+#     assets_returns = portfolio_universe.portfolio_universe_EUR.select(
+#         pl.exclude("Return_RF_EU")
+#     ).filter(
+#         (pl.col("TIME_PERIOD") >= common_var.portfolios_start_date_pl) & (pl.col("TIME_PERIOD") <= common_var.last_tdf_pl)
+#     ).filter(
+#         pl.col("Portfolio region").cast(PortFolioRegion).is_in(asset_names)
+#     ).pivot(
+#         index = "TIME_PERIOD", on = ["Portfolio", "Region"], values = "Return_EUR"
+#     ).unpivot(
+#         index = "TIME_PERIOD", value_name = "Return", variable_name = "Portfolio"
+#     ).with_columns(
+#         (pl.col("Return") / 100).alias("Return"), # converting to %
+#         pl.col("Portfolio").cast(PortFolioRegion)
+#     ).select(
+#         portfolio_strategies.schema_asset_returns.keys()
+#     )
+#     ## Weights assets and strategies
+#     portfolio_weights_shifted_one_period_later =  optimal_strategies["Optimal strategies"].select(
+#                 ["TIME_PERIOD", "Portfolio strategy", "Portfolio", "Weight"]
+#             ).filter(
+#                 (pl.col("TIME_PERIOD") >= common_var.portfolios_start_date_pl) & (pl.col("TIME_PERIOD") <= common_var.last_tdf_pl)
+#             ).sort(
+#                 ["Portfolio strategy", "Portfolio", "TIME_PERIOD"]
+#             ).with_columns(
+#                 (pl.col("TIME_PERIOD").shift(-1).over(["Portfolio strategy", "Portfolio"])).alias("TIME_PERIOD"),
+#             ).cast(
+#                 {"Portfolio": PortFolioRegion, "Portfolio strategy": InvestmentStrategyPortfolios}
+#             ).select(
+#                 portfolio_strategies.schema_portfolio_weights.keys()
+#             )
+#
+#     ### Assets all in weights
+#     assets_all_in_weights = portfolio_strategies.all_in_weights(assets_returns)
+#
+#     weights_assets_strategies_weights_shifted_on_period = pl.concat([assets_all_in_weights, portfolio_weights_shifted_one_period_later])
+#
+#     # Init strategies
+#     portfolio_strategies_return_input = portfolio_strategies.PortfolioReturnInput(weights_assets_strategies_weights_shifted_on_period, assets_returns)
+#
+#     # Apply portfolio strategies
+#     apply_investment = portfolio_strategies.PortfolioReturnCalculator(portfolio_strategies_return_input)
+#
+#     # Finding portfolio value for all in on the active portfolio strategies
+#     ## Run strategies and all in on assets
+#     ### Strategies for long
+#     returns_mv = apply_investment.all_in_strategy_returns(InvestmentStrategyPortfolios.Sharpe, 100)
+#     returns_gmv = apply_investment.all_in_strategy_returns(InvestmentStrategyPortfolios.GlobalMV, 100)
+#     returns_rp = apply_investment.all_in_strategy_returns(InvestmentStrategyPortfolios.RP, 100)
+#     returns_max_return = apply_investment.all_in_strategy_returns(InvestmentStrategyPortfolios.MaxReturn, 100)
+#
+#     returns_all_in_asset = pl.DataFrame(schema=portfolio_strategies.schema_portfolio_values)
+#     for asset in assets:
+#         return_asset = apply_investment.all_in_strategy_returns(asset, 100)
+#         returns_all_in_asset.extend(return_asset)
+#
+#     # Combining
+#     returns_active_portfolio = pl.concat(
+#         [returns_all_in_asset, returns_mv, returns_gmv, returns_rp, returns_max_return]
+#     ).sort(
+#         ["Strategy ID", "TIME_PERIOD"]
+#     )
+#     px.line(returns_active_portfolio, x = "TIME_PERIOD", y = "Value", color = "Strategy ID").show()
+#
+#     return optimal_strategies, returns_active_portfolio
 
 # Paths
 fama_french_paths = data.FamaFrenchPaths()
@@ -129,7 +130,7 @@ risk_free_returns = pl.concat(
 )
 #### Creating TDFs as portfolio enums: risk_free_returns.select(pl.col("Portfolio")).unique().with_columns((pl.col("Portfolio").str.replace_all(' ', '').str.replace_all('-', '_') + " = '" + pl.col("Portfolio") + "'").alias("Portfolio_Enum")).select("Portfolio_Enum").write_csv(portfolio_analysis_paths.tdf_enums_path)
 ## Defining weights
-weights_tdf = __all_in_weights(risk_free_returns)
+weights_tdf = portfolio_strategies.all_in_weights(risk_free_returns)
 
 # Initialising portfolio universe
 portfolio_universe = portfolio_strategies.PortfolioStrategy(fama_french_portfolios.filter(pl.col("N_Portfolios") == 6))
@@ -145,21 +146,34 @@ dates_efficient_frontier = pl.DataFrame(
 ).with_columns(
     (pl.date(year = pl.col("Year"), month = pl.col("Month"), day = pl.col("Day"))).dt.month_end().alias("Date")
 )
+
 # Find the optimal predetermined strategies.
-optimal_strategies_long_assets = create_analysis_data(portfolio_universe, long_assets, dates_efficient_frontier)
-optimal_strategies_short_assets = create_analysis_data(portfolio_universe, short_assets, dates_efficient_frontier)
-optimal_strategies_chosen_assets = create_analysis_data(portfolio_universe, chosen_assets, dates_efficient_frontier)
+optimal_strategies_long_assets = portfolio_strategies.PortfolioStrategyAnalysis(portfolio_universe, long_assets, dates_efficient_frontier)
+optimal_strategies_short_assets = portfolio_strategies.PortfolioStrategyAnalysis(portfolio_universe, short_assets, dates_efficient_frontier)
+optimal_strategies_chosen_assets = portfolio_strategies.PortfolioStrategyAnalysis(portfolio_universe, chosen_assets, dates_efficient_frontier)
+
+
 
 
 
 # Output
-optimal_strategies_long_assets[0]["Optimal strategies"].write_csv(portfolio_analysis_paths.optimal_portfolio_strategies)
-optimal_strategies_long_assets[0]["Efficient frontier"].write_csv(portfolio_analysis_paths.efficient_frontiers)
 portfolio_universe.portfolio_universe_EUR.write_csv(portfolio_analysis_paths.portfolio_universe_path)
-optimal_strategies_long_assets[1].write_csv(portfolio_analysis_paths.optimal_long_portfolio_strategies_returns_path)
-optimal_strategies_short_assets[1].write_csv(portfolio_analysis_paths.optimal_short_portfolio_strategies_returns_path)
+
+optimal_strategies_long_assets.optimal_strategies["Optimal strategies"].write_csv(portfolio_analysis_paths.optimal_portfolio_strategies_long)
+optimal_strategies_long_assets.optimal_strategies["Efficient frontier"].write_csv(portfolio_analysis_paths.efficient_frontiers_long)
+optimal_strategies_short_assets.optimal_strategies["Optimal strategies"].write_csv(portfolio_analysis_paths.optimal_portfolio_strategies_short)
+optimal_strategies_short_assets.optimal_strategies["Efficient frontier"].write_csv(portfolio_analysis_paths.efficient_frontiers_short)
+optimal_strategies_chosen_assets.optimal_strategies["Optimal strategies"].write_csv(portfolio_analysis_paths.optimal_portfolio_strategies_chosen_assets)
+optimal_strategies_chosen_assets.optimal_strategies["Efficient frontier"].write_csv(portfolio_analysis_paths.efficient_frontiers_chosen_assets)
+
+optimal_strategies_long_assets.values_active_portfolio.write_csv(portfolio_analysis_paths.optimal_long_portfolio_strategies_returns_path)
+optimal_strategies_short_assets.values_active_portfolio.write_csv(portfolio_analysis_paths.optimal_short_portfolio_strategies_returns_path)
+optimal_strategies_chosen_assets.values_active_portfolio.write_csv(portfolio_analysis_paths.optimal_chosen_assets_portfolio_strategies_returns_path)
+
 risk_free_returns.write_csv(portfolio_analysis_paths.tdf_returns_path)
 weights_tdf.write_csv(portfolio_analysis_paths.tdf_weights_path)
+
+
 
 
 

@@ -14,6 +14,16 @@ schema_portfolio_values = {"TIME_PERIOD": pl.Date, "Value": pl.Float64, "Strateg
 efficient_frontier_schema = {"TIME_PERIOD": pl.Date, "Portfolio": PortFolioRegion, "Historical return": pl.Float64, "Historical variance": pl.Float64, "Type": pl.String}
 short_portfolios = (PortFolioRegion.MomEu.value, PortFolioRegion.MomUs.value, PortFolioRegion.SmbEu.value, PortFolioRegion.SmbUs.value, PortFolioRegion.HmlEu.value, PortFolioRegion.HmlUs.value)
 
+def all_in_weights(df: pl.DataFrame):
+    """Function for all-in on one asset."""
+    return df.with_columns(
+        pl.lit(1).cast(pl.Float64).alias("Weight"),
+        pl.col("Portfolio").cast(InvestmentStrategyPortfolios).alias("Portfolio strategy")
+    ).drop_nulls(
+    ).select(
+        schema_portfolio_weights.keys()
+    )
+
 class PortfolioStrategy:
     """Get methods for implementing different active portfolio strategies for a list of portfolio names."""
     def __init__(self, fama_french_data: pl.DataFrame):
@@ -495,7 +505,6 @@ class PortfolioReturnCalculator:
         )
 
 
-
     def portfolio_values(self, strategy_id: str, initial_weights: dict[InvestmentStrategyPortfolios, float], initial_values: dict[str, float], balancing_method: Callable[[dict[str, float], dict[InvestmentStrategyPortfolios, float], dict[str, float]], tuple[dict[InvestmentStrategyPortfolios, float], dict[str, float]]], start_period = common_var.portfolios_start_date_pl, start_period_pd = common_var.portfolios_start_date_pd, end_period = common_var.last_tdf_pl):
         """Calculate the value of a portfolio for an investment strategy where balancing at each timepoint.
             * strategy_id: The name to be given to the portfolio.
@@ -565,3 +574,124 @@ class PortfolioReturnCalculator:
         initial_weights_dict = {investment_strategy_portfolio: 1}
         initial_value_dict = {investment_strategy_portfolio.value: initial_value}
         return self.portfolio_values(investment_strategy_portfolio.value, initial_weights_dict, initial_value_dict, balancing, start_period, start_period_pd, end_period) #balancing
+
+class PortfolioStrategyAnalysis:
+    def __init__(self, portfolio_universe: PortfolioStrategy, assets: tuple, dates_efficient_frontier, out_of_sample_period = common_var.out_of_sample_period, last_date = common_var.last_tdf_pl):
+        self.assets = assets
+        __portfolio_universe = portfolio_universe
+        __asset_names = tuple([name.value for name in assets])
+
+        self.optimal_strategies = portfolio_universe.running_optimal_portfolio_strategies(out_of_sample_period, __asset_names, dates_efficient_frontier, last_date)
+
+        # Weights and efficient frontier
+        # Calculating returns for the investment strategies
+        ## Preparing input based on optimal portfolio strategies
+        assets_returns = portfolio_universe.portfolio_universe_EUR.select(
+            pl.exclude("Return_RF_EU")
+        ).filter(
+            (pl.col("TIME_PERIOD") >= common_var.portfolios_start_date_pl) & (pl.col("TIME_PERIOD") <= common_var.last_tdf_pl)
+        ).filter(
+            pl.col("Portfolio region").cast(PortFolioRegion).is_in(__asset_names)
+        ).pivot(
+            index = "TIME_PERIOD", on = ["Portfolio", "Region"], values = "Return_EUR"
+        ).unpivot(
+            index = "TIME_PERIOD", value_name = "Return", variable_name = "Portfolio"
+        ).with_columns(
+            (pl.col("Return") / 100).alias("Return"), # converting to %
+            pl.col("Portfolio").cast(PortFolioRegion)
+        ).select(
+            schema_asset_returns.keys()
+        )
+        ## Weights assets and strategies
+        portfolio_weights_shifted_one_period_later =  self.optimal_strategies["Optimal strategies"].select(
+            ["TIME_PERIOD", "Portfolio strategy", "Portfolio", "Weight"]
+        ).filter(
+            (pl.col("TIME_PERIOD") >= common_var.portfolios_start_date_pl) & (pl.col("TIME_PERIOD") <= common_var.last_tdf_pl)
+        ).sort(
+            ["Portfolio strategy", "Portfolio", "TIME_PERIOD"]
+        ).with_columns(
+            (pl.col("TIME_PERIOD").shift(-1).over(["Portfolio strategy", "Portfolio"])).alias("TIME_PERIOD"),
+        ).cast(
+            {"Portfolio": PortFolioRegion, "Portfolio strategy": InvestmentStrategyPortfolios}
+        ).select(
+            schema_portfolio_weights.keys()
+        )
+
+        ### Assets all in weights
+        assets_all_in_weights = all_in_weights(assets_returns)
+
+        weights_assets_strategies_weights_shifted_on_period = pl.concat([assets_all_in_weights, portfolio_weights_shifted_one_period_later])
+
+        # Init strategies
+        portfolio_strategies_return_input = PortfolioReturnInput(weights_assets_strategies_weights_shifted_on_period, assets_returns)
+
+        # Apply portfolio strategies
+        apply_investment = PortfolioReturnCalculator(portfolio_strategies_return_input)
+
+        # Finding portfolio value for all in on the active portfolio strategies
+        ## Run strategies and all in on assets
+        ### Strategies
+        returns_mv = apply_investment.all_in_strategy_returns(InvestmentStrategyPortfolios.Sharpe, 100)
+        returns_gmv = apply_investment.all_in_strategy_returns(InvestmentStrategyPortfolios.GlobalMV, 100)
+        returns_rp = apply_investment.all_in_strategy_returns(InvestmentStrategyPortfolios.RP, 100)
+        returns_max_return = apply_investment.all_in_strategy_returns(InvestmentStrategyPortfolios.MaxReturn, 100)
+        ### Individual assets
+        returns_all_in_asset = pl.DataFrame(schema = schema_portfolio_values)
+        for asset in assets:
+            return_asset = apply_investment.all_in_strategy_returns(asset, 100)
+            returns_all_in_asset.extend(return_asset)
+
+        # Combining
+        self.values_active_portfolio = pl.concat(
+            [returns_all_in_asset, returns_mv, returns_gmv, returns_rp, returns_max_return]
+        ).sort(
+            ["Strategy ID", "TIME_PERIOD"]
+        )
+
+        # Creating terminal efficient frontier
+        # returns_strategies_period = self.values_active_portfolio.filter(
+        #     ~pl.col("Portfolio strategy").is_in(__asset_names)
+        # ).sort(
+        #     ["Strategy ID", "TIME_PERIOD"], descending = False
+        # ).with_columns(
+        #     pl.col("Value").shift(1).over("Strategy ID").alias("Prev value"),
+        #     ((pl.col("Value") - pl.col("Prev value")) / pl.col("Prev value")).alias("Historical return"),
+        #     pl.col("Strategy ID").alias("Portfolio strategy")
+        # ).group_by(
+        #     "Portfolio strategy"
+        # ).agg(
+        #     pl.col("Historical return").mean(),
+        #     pl.col("Historical return").var().alias("Historical variance")
+        # )
+        #
+        # ## Preparing assets
+        # returns_assets = self.values_active_portfolio.filter(
+        #     pl.col("Portfolio strategy").is_in(__asset_names)
+        # ).sort(
+        #     ["Strategy ID", "TIME_PERIOD"], descending = False
+        # ).with_columns(
+        #     pl.col("Value").shift(1).over("Strategy ID").alias("Prev value"),
+        #     ((pl.col("Value") - pl.col("Prev value")) / pl.col("Prev value")).alias("Return"),
+        #     pl.col("Strategy ID").alias("Portfolio strategy")
+        # ).select(
+        #     ["TIME_PERIOD", "Portfolio strategy", "Return"]
+        # ).pivot(
+        #     index = "TIME_PERIOD", on = "Portfolio strategy"
+        # ).select(
+        #     __asset_names
+        # ).to_numpy()
+        #
+        # mu = np.mean(returns_assets)
+        # mu_e = None
+        # var_matrix = np.var(returns_assets)
+        # var_matrix_e = None
+        #
+        # min_return = float(returns_strategies_period["Historical return"].min())
+        #
+        # efficient_frontier_end = __portfolio_universe.efficient_frontier(last_date, returns_strategies_period, mu, mu_e, var_matrix, var_matrix_e, min_return, asset_names, include_rf = False, index_rf = None, long_assets_length = None, include_short_portfolios = False)
+        # #time_period, investment_strategies: pl.DataFrame, mu: np.ndarray, mu_e: np.ndarray, var_matrix: np.ndarray, var_matrix_e: np.ndarray, mu_min: float, asset_names: list, include_rf: bool, index_rf: int, long_assets_length: int, include_short_portfolios: bool
+        #
+        #
+        #
+
+
