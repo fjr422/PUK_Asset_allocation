@@ -71,6 +71,7 @@ class PortfolioAnalysisPaths:
         # Output
         self.tdf_returns_path = os.path.join(self.__active_portfolio_output_folder, "tdf_returns.csv")
         self.tdf_weights_path = os.path.join(self.__active_portfolio_output_folder, "tdf_weights.csv")
+        self.zc_prices = os.path.join(self.__active_portfolio_output_folder, "zc_prices.csv")
 
         self.optimal_long_portfolio_strategies_returns_path = os.path.join(self.__active_portfolio_output_folder, "optimal_long_portfolio_strategies_values.csv")
         self.optimal_short_portfolio_strategies_returns_path = os.path.join(self.__active_portfolio_output_folder, "optimal_short_portfolio_strategies_values.csv")
@@ -89,10 +90,19 @@ class ActiveReserveStrategyAnalysisPaths:
     active_reserve_returns_path = os.path.join(__active_reserve_strategy_folder, "Input", "active_reserve_returns.csv")
 
     # Output
-    cppi_analysis_path = os.path.join(__active_reserve_strategy_folder, "Output", "cppi_analysis.csv")
-    cppi_terminal_values_path = os.path.join(__active_reserve_strategy_folder, "Output", "cppi_terminal_values.csv")
-    tie_in_trigger_analysis_path = os.path.join(__active_reserve_strategy_folder, "Output", "tie_in_trigger_analysis.csv")
-    tie_in_trigger_terminal_values_path = os.path.join(__active_reserve_strategy_folder, "Output", "tie_in_trigger_terminal_values.csv")
+    cppi_terminal_values_base_path = os.path.join(__active_reserve_strategy_folder, "Output", "cppi_terminal_values")
+    tie_in_terminal_values_base_path = os.path.join(__active_reserve_strategy_folder, "Output", "tie_in_trigger_terminal_values")
+
+    def cppi_analysis_path(self, target: str):
+        return os.path.join(self.__active_reserve_strategy_folder, "Output", "cppi_analysis" + target + ".csv")
+    def cppi_terminal_values_path_target(self, target: str):
+        return self.cppi_terminal_values_base_path + target + ".csv"
+    def tie_in_trigger_analysis_path(self, target: str):
+        return os.path.join(self.__active_reserve_strategy_folder, "Output", "tie_in_trigger_analysis" + target + ".csv")
+    def tie_in_trigger_terminal_values_path(self, target: str):
+        return self.tie_in_terminal_values_base_path + target + ".csv"
+
+
 
 class FamaFrenchInput:
     def __init__(self, fama_french_paths):

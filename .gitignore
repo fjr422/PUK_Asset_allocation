@@ -19,3 +19,5 @@ R/Data/YieldCurveData.csv
 /Data/Active_reserve_strategy/Output/cppi_analysis.csv
 /Data/Active_reserve_strategy/Output/tie_in_trigger_analysis.csv
 /Python/__pycache__/data.cpython-313.pyc
+/Data/Active_reserve_strategy/Output/cppi_analysis1.25.csv
+/Data/Active_reserve_strategy/Output/cppi_analysis1.4.csv
