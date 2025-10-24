@@ -11,7 +11,8 @@ saveFig <- function(fig, filename, width = 8, height = 4) {
 
 qplot <- ggplot2::qplot
 
-current_dir <- getwd()
+
+current_dir <- dirname(rstudioapi::getActiveDocumentContext()$path)
 WD <- file.path(current_dir, "..")
 setwd(WD)
 

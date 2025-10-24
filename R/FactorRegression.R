@@ -497,7 +497,7 @@ FactorPortfolios <- fama_french_portfolios %>% filter(TIME_PERIOD <= "2024-12-31
          SMB = SMB_EUR,
          MOM = MOM_EUR,
          Tech = Tech.Stocks.EUR - RF_EU,
-         SmallCap = Small.Cap.EUR - RF_EU) %>%
+         SmallCap = Small.Cap.EUR - RF_EU,) %>%
   select(c(TIME_PERIOD, Region, MKT, SMB, MOM, Tech, SmallCap, RF_EU)) %>% unique() %>% pivot_wider(names_from = Region, values_from = c(MKT, SMB, MOM, Tech, SmallCap))
  
 
@@ -508,9 +508,29 @@ SummaryFactorPFs <- FactorPortfolios %>% pivot_longer(cols = -TIME_PERIOD, names
             Q1 = quantile(Return, 0.25),
             Median = median(Return),
             Q3 = quantile(Return, 0.75),
-            Max. = max(Return)
+            Max. = max(Return),
+            Volatility = sd(Return)
   ) %>% mutate(Portfolio = factor(Portfolio, levels = c("MKT_EU", "MKT_US", "MOM_EU", "MOM_US", "SMB_EU", "SMB_US", "Tech_EU","Tech_US", "SmallCap_EU", "SmallCap_US", "RF_EU" ))) %>%
   arrange(Portfolio)
+
+SummaryFactorPFs %>% mutate(Portfolio = recode(Portfolio,
+                                               "MKT_EU" = "EU Market",
+                                               "MKT_US" = "US Market ",
+                                               "MOM_EU" = "EU MOM",
+                                               "MOM_US" = "US MOM",
+                                               "SMB_EU" = "EU SMB",
+                                               "SMB_US" = "US SMB",
+                                               "Tech_EU" = "EU Tech",
+                                               "Tech_US" = "US Tech",
+                                               "SmallCap_EU" = "EU Small Cap",
+                                               "SmallCap_US" = "US Small Cap",
+                                               "RF_EU" = "Risk-free")) %>% select(Portfolio, Mean, Volatility) %>% ggplot(aes(x = Volatility, y = Mean, label = Portfolio)) +
+  geom_point() +
+  geom_text(vjust = -0.5, hjust = 0.5) + xlim(-.3,7) + ylim(-.05,1.1) + 
+  labs(title = "Portfolios: Mean vs. Volatility",
+       x = "Volatility",
+       y = "Mean Return") + theme_bw()
+
 
 
 
