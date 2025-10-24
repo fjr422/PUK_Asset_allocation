@@ -74,7 +74,7 @@ optimal_portfolio_strategies_return %>%
        color = "Portfolio Strategy") +
   US_EU_PF_colors + theme_bw()
 
-optimal_portfolio_strategies_values %>%
+optimal_short_portfolio_strategies_values %>%
   mutate(Portfolio.name = plot_pf_names(Portfolio.name),
          'Region' = sapply(Portfolio.name, region_pf_names)) %>%
   ggplot(aes(x = as.Date(TIME_PERIOD), y = Value, color = Portfolio.name)) +
@@ -105,6 +105,14 @@ a %>% ggplot(aes(x = TIME_TO_MATURITY/12, y = ZCB_price, color = TIME_PERIOD)) +
        color = "Date") +
   xlim(10,0) + 
   theme_bw() + guides(color = FALSE)
+
+a %>% filter(TIME_TO_MATURITY == 120) %>% 
+  ggplot(aes(x = as.Date(TIME_PERIOD), y = 100*ZCB_price)) +
+  geom_line(size = .5) +
+  labs(title = "Zero Coupon Bond Prices with 10-Year Maturity over Time",
+       x = "Time Period",
+       y = "ZCB Price (10-Year Maturity)") +
+  theme_bw()
 
 
 Plot_ReturnsOfLongOnly <- optimal_long_portfolio_strategies_values %>%

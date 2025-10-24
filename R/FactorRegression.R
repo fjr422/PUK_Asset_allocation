@@ -513,7 +513,7 @@ SummaryFactorPFs <- FactorPortfolios %>% pivot_longer(cols = -TIME_PERIOD, names
   ) %>% mutate(Portfolio = factor(Portfolio, levels = c("MKT_EU", "MKT_US", "MOM_EU", "MOM_US", "SMB_EU", "SMB_US", "Tech_EU","Tech_US", "SmallCap_EU", "SmallCap_US", "RF_EU" ))) %>%
   arrange(Portfolio)
 
-SummaryFactorPFs %>% mutate(Portfolio = recode(Portfolio,
+Mean_Vol_data <- SummaryFactorPFs %>% mutate(Portfolio = recode(Portfolio,
                                                "MKT_EU" = "EU Market",
                                                "MKT_US" = "US Market ",
                                                "MOM_EU" = "EU MOM",
@@ -524,8 +524,14 @@ SummaryFactorPFs %>% mutate(Portfolio = recode(Portfolio,
                                                "Tech_US" = "US Tech",
                                                "SmallCap_EU" = "EU Small Cap",
                                                "SmallCap_US" = "US Small Cap",
-                                               "RF_EU" = "Risk-free")) %>% select(Portfolio, Mean, Volatility) %>% ggplot(aes(x = Volatility, y = Mean, label = Portfolio)) +
-  geom_point() +
+                                               "RF_EU" = "Risk-free")) %>% select(Portfolio, Mean, Volatility)
+
+Mean_Vol_plot <- Mean_Vol_data %>% 
+  ggplot(aes(x = Volatility, y = Mean, label = Portfolio)) +
+  geom_point() + geom_smooth(method = "lm",
+                             formula = y ~ 0 + x,   # force intercept = 0
+                             se = FALSE,
+                             color = "gray77") + 
   geom_text(vjust = -0.5, hjust = 0.5) + xlim(-.3,7) + ylim(-.05,1.1) + 
   labs(title = "Portfolios: Mean vs. Volatility",
        x = "Volatility",
@@ -534,14 +540,73 @@ SummaryFactorPFs %>% mutate(Portfolio = recode(Portfolio,
 
 
 
+saveFig(Mean_Vol_plot, "R/Output/Mean_Vol_FactorPortfolios.pdf", width = 10, height = 6)
+
+Mean_Vol_table <- Mean_Vol_data %>%
+  pivot_longer(cols = c(Mean, Volatility), names_to = " ", values_to = "Value") %>%
+  pivot_wider(names_from = Portfolio, values_from = Value)
+
+
+
+Mean_Vol_plot_with_table <- gridExtra::grid.arrange(
+  Mean_Vol_plot,
+  gridExtra::tableGrob(
+    Mean_Vol_data %>%
+      mutate(Mean = paste0(round(Mean, 2), "%"),
+             Volatility = round(Volatility,2)) %>% select(Portfolio, "Mean Return" = Mean, Volatility) %>%  # format as %
+      tibble::column_to_rownames("Portfolio") %>%
+      t() %>%
+      as.data.frame() %>%
+      tibble::rownames_to_column(" ") ,
+    rows = NULL,
+    theme = gridExtra::ttheme_default(
+      core = list(fg_params = list(cex = 0.8)),
+      colhead = list(fg_params = list(cex = 0.9, fontface = "bold"))
+    )
+  ),
+  ncol = 1,
+  heights = c(3, 0.8)  # Adjust the relative space for plot vs. table
+)
+
+
+
+
+Mean_Vol_table %>%
+  xtable(digits = c(0, rep(2, ncol(Mean_Vol_table)))) %>% 
+  print(type = "latex",
+        file = "R/Output/Mean_Vol_FactorPortfolios.tex",
+        include.rownames = FALSE,
+        include.colnames = TRUE)
+
+
 cov_factorportfolios <- cov(FactorPortfolios %>% select(-TIME_PERIOD, -RF_EU))
 round(cov_factorportfolios,2)
 
-cor(FactorPortfolios %>% select(-c(TIME_PERIOD, RF_EU, MOM_EU, MOM_US, SMB_EU, SMB_US)) , method = "spearman") %>%
+MKT_SMB_MOM_corplot <- cor(FactorPortfolios %>% select(c("EU Market" = MKT_EU,
+                                  "US Market" = MKT_US,
+                                  "EU SMB" = SMB_EU,
+                                  "US SMB" = SMB_US,
+                                  "EU MOM" = MOM_EU, 
+                                  "US MOM" = MOM_US)) , method = "spearman") %>%
   corrplot(method = "color",
            tl.col = "black",    # label color
            tl.srt = 45,         # label rotation
            addCoef.col = "black")
+
+
+MKT_TECH_SMALL_corplot <- cor(FactorPortfolios %>% select(c("EU Market" = MKT_EU,
+                                  "US Market" = MKT_US,
+                                  "EU Tech" = Tech_EU,
+                                  "US Tech" = Tech_US,
+                                  "EU Small Cap" = SmallCap_EU, 
+                                  "US Small Cap" = SmallCap_US)) , method = "spearman") %>%
+  corrplot(method = "color",
+           tl.col = "black",    # label color
+           tl.srt = 45,         # label rotation
+           addCoef.col = "black")
+
+
+
 
 
 # before shorting restriction: MKT_US and MOM_EU
