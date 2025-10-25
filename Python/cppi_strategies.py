@@ -17,6 +17,21 @@ chosen_assets_values = pl.read_csv(portfolio_analysis_paths.optimal_chosen_asset
     pl.lit("Chosen assets").alias("Universe")
 )
 
+all_values = pl.concat([long_values, short_values, chosen_assets_values])
+px.line(all_values, x = "TIME_PERIOD", y = "Value", color = "Strategy ID", facet_col = "Universe", title="Values").show()
+
+long_weights = pl.read_csv(portfolio_analysis_paths.optimal_portfolio_strategies_long).with_columns(
+    pl.lit("Long assets").alias("Universe")
+)
+short_weights = pl.read_csv(portfolio_analysis_paths.optimal_portfolio_strategies_short).with_columns(
+    pl.lit("Short assets").alias("Universe")
+)
+chosen_weights = pl.read_csv(portfolio_analysis_paths.optimal_portfolio_strategies_chosen_assets).with_columns(
+    pl.lit("Chosen assets").alias("Universe")
+)
+all_weights = pl.concat([long_weights, short_weights, chosen_weights])
+
+px.line(all_weights, x = "TIME_PERIOD", y = "Weight", color = "Portfolio", facet_col = "Universe", facet_row="Portfolio strategy", title="Weights").show()
 cppi_terminal_values = pl.scan_csv(active_reserve_strategy_paths.cppi_terminal_values_base_path + "*.csv", try_parse_dates=True).collect()
 
 tie_in_terminal_values = pl.scan_csv(active_reserve_strategy_paths.tie_in_terminal_values_base_path + "*.csv", try_parse_dates=True).collect()
@@ -40,21 +55,7 @@ sharpe_short = get_sharpe(short_values)
 sharpe_chosen = get_sharpe(chosen_assets_values)
 
 
-# all_values = pl.concat([long_values, short_values, chosen_assets_values])
-# px.line(all_values, x = "TIME_PERIOD", y = "Value", color = "Strategy ID", color = "Universe", title="Values").show()
-#
-# long_weights = pl.read_csv(portfolio_analysis_paths.optimal_portfolio_strategies_long).with_columns(
-#     pl.lit("Long assets").alias("Universe")
-# )
-# short_weights = pl.read_csv(portfolio_analysis_paths.optimal_portfolio_strategies_short).with_columns(
-#     pl.lit("Short assets").alias("Universe")
-# )
-# chosen_weights = pl.read_csv(portfolio_analysis_paths.optimal_portfolio_strategies_chosen_assets).with_columns(
-#     pl.lit("Chosen assets").alias("Universe")
-# )
-# all_weights = pl.concat([long_weights, short_weights, chosen_weights])
-#
-# px.line(all_weights, x = "TIME_PERIOD", y = "Weight", color = "Portfolio", color = "Universe", facet_row="Portfolio strategy", title="Weights").show()
+
 
 
 # Analysis of CPPI and Tie-in

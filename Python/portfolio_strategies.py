@@ -190,11 +190,10 @@ class PortfolioStrategy:
     @staticmethod
     def __optimize_risk_parity(var_matrix: np.ndarray, var_matrix_e: np.ndarray, asset_names: tuple, long_assets_length: int, index_rf: int, include_short_assets: bool):
         # Positive allocation and equal volatility
-
         if include_short_assets:
             inverse_volatility = 1 / np.sqrt(var_matrix_e.diagonal()) # Using excess when allowing shorting.
 
-            total_inverse_volatility_wealth_assets = np.sum(inverse_volatility) # As w_B = (sum(w_s)) / k. and w_B + sum(W_L) = 1 we should still normalise by remaining.
+            total_inverse_volatility_wealth_assets = np.sum(inverse_volatility) # As w_B = (sum(w_short)) / k. and w_B + sum(W_Long) = 1 we should still normalise by remaining.
             weights_risky = inverse_volatility / total_inverse_volatility_wealth_assets
             weights = np.insert(weights_risky, index_rf, np.sum(weights_risky[long_assets_length-1:])) # Weight in bank should be equal to short-portfolios
 
@@ -641,13 +640,8 @@ class PortfolioStrategyAnalysis:
             schema_portfolio_weights.keys()
         )
 
-        ### Assets all in weights
-        assets_all_in_weights = all_in_weights(assets_returns)
-
-        weights_assets_strategies_weights_shifted_on_period = pl.concat([assets_all_in_weights, portfolio_weights_shifted_one_period_later])
-
         # Init strategies
-        portfolio_strategies_return_input = PortfolioReturnInput(weights_assets_strategies_weights_shifted_on_period, assets_returns)
+        portfolio_strategies_return_input = PortfolioReturnInput(portfolio_weights_shifted_one_period_later, assets_returns)
 
         # Apply portfolio strategies
         apply_investment = PortfolioReturnCalculator(portfolio_strategies_return_input)
