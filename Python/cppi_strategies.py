@@ -7,19 +7,39 @@ import data
 active_reserve_strategy_paths = data.ActiveReserveStrategyAnalysisPaths()
 portfolio_analysis_paths = data.PortfolioAnalysisPaths()
 # Input
+long_values = pl.read_csv(portfolio_analysis_paths.optimal_long_portfolio_strategies_returns_path).with_columns(
+    pl.lit("Long assets").alias("Universe")
+)
+short_values = pl.read_csv(portfolio_analysis_paths.optimal_short_portfolio_strategies_returns_path).with_columns(
+    pl.lit("Short assets").alias("Universe")
+)
+chosen_assets_values = pl.read_csv(portfolio_analysis_paths.optimal_chosen_assets_portfolio_strategies_returns_path).with_columns(
+    pl.lit("Chosen assets").alias("Universe")
+)
+
 cppi_terminal_values = pl.scan_csv(active_reserve_strategy_paths.cppi_terminal_values_base_path + "*.csv", try_parse_dates=True).collect()
+
 tie_in_terminal_values = pl.scan_csv(active_reserve_strategy_paths.tie_in_terminal_values_base_path + "*.csv", try_parse_dates=True).collect()
 
-# long_values = pl.read_csv(portfolio_analysis_paths.optimal_long_portfolio_strategies_returns_path).with_columns(
-#     pl.lit("Long assets").alias("Universe")
-# )
-# short_values = pl.read_csv(portfolio_analysis_paths.optimal_short_portfolio_strategies_returns_path).with_columns(
-#     pl.lit("Short assets").alias("Universe")
-# )
-# chosen_assets_values = pl.read_csv(portfolio_analysis_paths.optimal_chosen_assets_portfolio_strategies_returns_path).with_columns(
-#     pl.lit("Chosen assets").alias("Universe")
-# )
-#
+# Strategies and fund performance
+
+def get_sharpe(df: pl.DataFrame):
+    return df.group_by(
+        "Fund name"
+    ).agg(
+        pl.col("Return").mean().alias("Avg"),
+        pl.col("Return").var().alias("Var"),
+        ((pl.col("Return") < 0) * pl.col("Return")).var().alias("Var losses"),
+    ).with_columns(
+        (pl.col("Avg") / pl.col("Var").sqrt()).alias("Sharpe"),
+        (pl.col("Avg") / pl.col("Var losses").sqrt()).alias("Sortino"),
+    )
+
+sharpe_long = get_sharpe(long_values)
+sharpe_short = get_sharpe(short_values)
+sharpe_chosen = get_sharpe(chosen_assets_values)
+
+
 # all_values = pl.concat([long_values, short_values, chosen_assets_values])
 # px.line(all_values, x = "TIME_PERIOD", y = "Value", color = "Strategy ID", color = "Universe", title="Values").show()
 #
@@ -36,6 +56,8 @@ tie_in_terminal_values = pl.scan_csv(active_reserve_strategy_paths.tie_in_termin
 #
 # px.line(all_weights, x = "TIME_PERIOD", y = "Weight", color = "Portfolio", color = "Universe", facet_row="Portfolio strategy", title="Weights").show()
 
+
+# Analysis of CPPI and Tie-in
 cppi_group_m = cppi_terminal_values.with_columns(
     (pl.col("Value") / pl.col("Initial guarantee")).alias("Terminal to initial")
 ).filter(

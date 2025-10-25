@@ -399,7 +399,7 @@ class PortfolioStrategy:
         ).pivot(
             values = "Excess return RF_EU", index = ["TIME_PERIOD", "Return_RF_EU"], on = "Portfolio region"
         ).sort(
-            ["TIME_PERIOD"], descending=False
+            [ "TIME_PERIOD"], descending=False
         )
 
         # Getting returns. Order is portfolio_IDs.
@@ -490,7 +490,7 @@ class PortfolioStrategy:
                         self.efficient_frontier(time_period, investment_strategies, mu, mu_e, var_matrix, var_matrix_e, global_minimum_variance["Historical return"].min(), asset_names_concat, include_rf, index_rf, long_assets_length, include_short_portfolios)
                     )
 
-        return {"Optimal strategies": optimized_weights, "Efficient frontier": efficient_frontiers}
+        return {"Optimal strategies": optimized_weights.sort(["Portfolio strategy", "Portfolio", "TIME_PERIOD"]), "Efficient frontier": efficient_frontiers.sort(["Portfolio", "TIME_PERIOD"])}
 
 # Portfolio return classes
 class PortfolioReturnInput:
@@ -669,53 +669,13 @@ class PortfolioStrategyAnalysis:
         self.values_active_portfolio = pl.concat(
             [returns_all_in_asset, returns_mv, returns_gmv, returns_rp, returns_max_return]
         ).sort(
-            ["Strategy ID", "TIME_PERIOD"]
+            ["Strategy ID", "TIME_PERIOD", "Fund name"], descending = False
+        ).with_columns(
+            pl.col("Value").shift(1).over(["Strategy ID", "Fund name"]).alias("Previous value")
+        ).with_columns(
+            ((pl.col("Value") - pl.col("Previous value")) / pl.col("Previous value")).alias("Return")
+        ).select(
+            ["TIME_PERIOD", "Strategy ID", "Fund name", "Value", "Return"]
+        ).sort(
+            ["Strategy ID", "TIME_PERIOD", "Fund name"], descending = False
         )
-
-        # Creating terminal efficient frontier
-        # returns_strategies_period = self.values_active_portfolio.filter(
-        #     ~pl.col("Portfolio strategy").is_in(__asset_names)
-        # ).sort(
-        #     ["Strategy ID", "TIME_PERIOD"], descending = False
-        # ).with_columns(
-        #     pl.col("Value").shift(1).over("Strategy ID").alias("Prev value"),
-        #     ((pl.col("Value") - pl.col("Prev value")) / pl.col("Prev value")).alias("Historical return"),
-        #     pl.col("Strategy ID").alias("Portfolio strategy")
-        # ).group_by(
-        #     "Portfolio strategy"
-        # ).agg(
-        #     pl.col("Historical return").mean(),
-        #     pl.col("Historical return").var().alias("Historical variance")
-        # )
-        #
-        # ## Preparing assets
-        # returns_assets = self.values_active_portfolio.filter(
-        #     pl.col("Portfolio strategy").is_in(__asset_names)
-        # ).sort(
-        #     ["Strategy ID", "TIME_PERIOD"], descending = False
-        # ).with_columns(
-        #     pl.col("Value").shift(1).over("Strategy ID").alias("Prev value"),
-        #     ((pl.col("Value") - pl.col("Prev value")) / pl.col("Prev value")).alias("Return"),
-        #     pl.col("Strategy ID").alias("Portfolio strategy")
-        # ).select(
-        #     ["TIME_PERIOD", "Portfolio strategy", "Return"]
-        # ).pivot(
-        #     index = "TIME_PERIOD", on = "Portfolio strategy"
-        # ).select(
-        #     __asset_names
-        # ).to_numpy()
-        #
-        # mu = np.mean(returns_assets)
-        # mu_e = None
-        # var_matrix = np.var(returns_assets)
-        # var_matrix_e = None
-        #
-        # min_return = float(returns_strategies_period["Historical return"].min())
-        #
-        # efficient_frontier_end = __portfolio_universe.efficient_frontier(last_date, returns_strategies_period, mu, mu_e, var_matrix, var_matrix_e, min_return, asset_names, include_rf = False, index_rf = None, long_assets_length = None, include_short_portfolios = False)
-        # #time_period, investment_strategies: pl.DataFrame, mu: np.ndarray, mu_e: np.ndarray, var_matrix: np.ndarray, var_matrix_e: np.ndarray, mu_min: float, asset_names: list, include_rf: bool, index_rf: int, long_assets_length: int, include_short_portfolios: bool
-        #
-        #
-        #
-
-
