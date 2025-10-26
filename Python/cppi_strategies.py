@@ -2,6 +2,7 @@ import polars as pl
 import plotly.express as px
 
 import data
+from enums import PortFolioRegion
 
 # Paths
 active_reserve_strategy_paths = data.ActiveReserveStrategyAnalysisPaths()
@@ -29,17 +30,18 @@ short_weights = pl.read_csv(portfolio_analysis_paths.optimal_portfolio_strategie
 chosen_weights = pl.read_csv(portfolio_analysis_paths.optimal_portfolio_strategies_chosen_assets).with_columns(
     pl.lit("Chosen assets").alias("Universe")
 )
-all_weights = pl.concat([long_weights, short_weights, chosen_weights])
+
+all_weights = pl.concat([long_weights, short_weights, chosen_weights]).filter(
+    pl.col("Portfolio strategy").is_in([PortFolioRegion.RP.value, PortFolioRegion.GlobalMV.value, PortFolioRegion.Sharpe.value, PortFolioRegion.MaxReturn.value])
+)
 
 px.line(all_weights, x = "TIME_PERIOD", y = "Weight", color = "Portfolio", facet_col = "Universe", facet_row="Portfolio strategy", title="Weights").show()
-cppi_terminal_values = pl.scan_csv(active_reserve_strategy_paths.cppi_terminal_values_base_path + "*.csv", try_parse_dates=True).collect()
-
-tie_in_terminal_values = pl.scan_csv(active_reserve_strategy_paths.tie_in_terminal_values_base_path + "*.csv", try_parse_dates=True).collect()
 
 # Strategies and fund performance
-
 def get_sharpe(df: pl.DataFrame):
-    return df.group_by(
+    return df.filter(
+        ~pl.col("Fund name").is_in([PortFolioRegion.RfEu.value])
+    ).group_by(
         "Fund name"
     ).agg(
         pl.col("Return").mean().alias("Avg"),
@@ -54,11 +56,12 @@ sharpe_long = get_sharpe(long_values)
 sharpe_short = get_sharpe(short_values)
 sharpe_chosen = get_sharpe(chosen_assets_values)
 
-
-
-
-
 # Analysis of CPPI and Tie-in
+cppi_terminal_values = pl.scan_csv(active_reserve_strategy_paths.cppi_terminal_values_base_path + "*.csv", try_parse_dates=True).collect()
+
+tie_in_terminal_values = pl.scan_csv(active_reserve_strategy_paths.tie_in_terminal_values_base_path + "*.csv", try_parse_dates=True).collect()
+tie_in_current = pl.read_csv(active_reserve_strategy_paths.current_tie_in_eu_market_terminal_values_path, try_parse_dates=True)
+
 cppi_group_m = cppi_terminal_values.with_columns(
     (pl.col("Value") / pl.col("Initial guarantee")).alias("Terminal to initial")
 ).filter(

@@ -7,14 +7,14 @@ years_tdf = 10
 tdf_end_in_months = 12 * years_tdf
 
 def shift_date_by_months(date: pd.Timestamp, months: int):
-    """Shift a date to the equivelant month end months later."""
+    """Shift a date to the equivalent month end months later."""
     month_start = date - pd.offsets.MonthBegin()
     shift_date = month_start + pd.offsets.DateOffset(months=months)
     shift_date_month_end = shift_date + pd.offsets.MonthEnd()
     return shift_date_month_end
 
 def shift_date_by_months_pl(date: pl.date, months: int):
-    """Shift a date to the equivelant month end months later."""
+    """Shift a date to the equivalent month end months later."""
     return date.dt.month_start().dt.offset_by(str(months) + "mo").dt.month_end()
 
 assets_start_date_pd = pd.Timestamp(year = 2004, month = 8, day = 31)
