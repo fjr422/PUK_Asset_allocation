@@ -1,11 +1,30 @@
 
 # Data-files from Python
-optimal__chosen_assets_portfolio_strategies_values <- read.csv("Data/Active_portfolio/Output/optimal_chosen_assets_portfolio_strategies_values.csv")
-optimal_long_portfolio_strategies_values <- read.csv("Data/Active_portfolio/Output/optimal_long_portfolio_strategies_values.csv")
-optimal_short_portfolio_strategies_values <- read.csv("Data/Active_portfolio/Output/optimal_short_portfolio_strategies_values.csv")
+optimal__chosen_assets_portfolio_strategies_values <- read.csv("Data/Active_portfolio/Output/optimal_chosen_assets_portfolio_strategies_values.csv") %>%
+  mutate(Universe = "Chosen Assets")
+optimal_long_portfolio_strategies_values <- read.csv("Data/Active_portfolio/Output/optimal_long_portfolio_strategies_values.csv") %>% 
+  mutate(Universe = "Long Assets")
+optimal_short_portfolio_strategies_values <- read.csv("Data/Active_portfolio/Output/optimal_short_portfolio_strategies_values.csv") %>%
+  mutate(Universe = "Short Assets")
 
 tdf_returns <- read.csv("Data/Active_portfolio/Output/tdf_returns.csv")
 tdf_weights <- read.csv("Data/Active_portfolio/Output/tdf_weights.csv")
+
+All_portfolio_strategies_values <- rbind(optimal_long_portfolio_strategies_values,
+                                         optimal_short_portfolio_strategies_values,
+                                         optimal__chosen_assets_portfolio_strategies_values)
+
+"Weights´
+
+
+Long_weights <- read.csv("Por") %>% mutate(Universe = "Long Assets")
+
+Short_weights <- read.csv() %>%
+  mutate(Universe = "Short Assets")
+Chosen_weights <- read.csv() %>%
+  mutate(Universe = "Chosen Assets")
+
+#All_weights <- rbind(Long_weights, Short_weights, Chosen_weights)
 
 # Recode PF names, to be descriptive for the report
 plot_pf_names <- function(name){
@@ -20,6 +39,7 @@ plot_pf_names <- function(name){
          '{"SMB","US"}' = 'US SMB',
          '{"MOM","EU"}' = 'European MOM',
          '{"MOM","US"}' = 'US MOM',
+         '{"RF","EU"}' = 'European Risk-Free'
          
   )
 }
@@ -31,15 +51,16 @@ US_EU_PF_colors <- scale_color_manual(
     "European MOM" = "#6BAED6",
     "European Small Cap Stocks" = "#9ECAE1",
     "European SMB" = "#C6DBEF",
-    "US Market" = "#99000D",
-    "US Tech Stocks" = "#CB181D",
-    "US MOM" = "#EF3B2C",
-    "US Small Cap Stocks" = "#FB6A4A",
-    "US SMB" = "#FBB4AE",
-    "Risk Parity" = "#008000",
-    "Global Minimum Variance portfolio" = "#00DD00",
-    "Sharpe-portfolio" = "#00FF00",
-    "Maximal historical return" = "#B8FFB8"
+    "US Market" = "#B2182B",
+    "US Tech Stocks" = "#D6604D",
+    "US MOM" = "#F4A582",
+    "US Small Cap Stocks" = "#FDDBC7",
+    "US SMB" = "#FEE0D2",
+    "Risk Parity" = "#238B45",                
+    "Global Minimum Variance portfolio" = "#2CA25F",  
+    "Sharpe-portfolio" = "#A1D99B",           
+    "Maximal historical return" = "#C7E9C0",  
+    "European Risk-Free" = "#AAAAAA"
   )
 )
 
@@ -70,23 +91,59 @@ optimal__chosen_assets_portfolio_strategies_values %>%
          'Region' = sapply(Strategy.ID, region_pf_names)) %>%
   ggplot(aes(x = as.Date(TIME_PERIOD), y = Value, color = Strategy.ID)) +
   geom_line(size = .8) +
-  labs(title = "Out-of-Sample Returns of Portfolio Strategies",
+  labs(title = "Out-of-Sample Returns of Long Portfolio Strategies",
        x = "Time Period",
        y = "Return",
        color = "Portfolio Strategy") +
   US_EU_PF_colors + theme_bw()
+
+optimal_short_portfolio_strategies_values$Strategy.ID %>% unique()
 
 optimal_short_portfolio_strategies_values %>%
   mutate(Strategy.ID = plot_pf_names(Strategy.ID),
          'Region' = sapply(Strategy.ID, region_pf_names)) %>%
   ggplot(aes(x = as.Date(TIME_PERIOD), y = Value, color = Strategy.ID)) +
   geom_line(size = 1) +
-  labs(title = "Out-of-Sample Returns of Portfolio Strategies",
+  labs(title = "Out-of-Sample Returns of Short Portfolio Strategies",
        x = "Time Period",
        y = "Return",
        color = "Portfolio Strategy") + 
   US_EU_PF_colors + theme_bw()
 
+
+AllStrategies_OOS <- All_portfolio_strategies_values %>% mutate(Strategy.ID = plot_pf_names(Strategy.ID),
+                                           'Region' = sapply(Strategy.ID, region_pf_names)) %>%
+  ggplot(aes(x = as.Date(TIME_PERIOD), y = Value, color = Strategy.ID)) +
+  geom_line(size = .6) +
+  labs(title = "Out-of-Sample Returns of Portfolio Strategies",
+       x = "Date",
+       y = "Value",
+       color = "Portfolio Strategy") + 
+  facet_wrap(~Universe) +
+  US_EU_PF_colors + theme_bw()
+
+saveFig(AllStrategies_OOS, "R/Output/AllStrategies_OOS.pdf", 12, 6)
+
+
+# AllStrategies_OOS_weights <- All_weights %>% mutate(Strategy.ID = plot_pf_names(Strategy.ID),
+#                                                                 'Region' = sapply(Strategy.ID, region_pf_names)) %>%
+#   ggplot(aes(x = as.Date(TIME_PERIOD), y = Weight, color = Portfolio)) +
+#   geom_line(size = .8) +
+#   labs(title = "Out-of-Sample Returns of Portfolio Strategies",
+#        x = "Date",
+#        y = "Weigths",
+#        color = "Portfolio Strategy") + 
+#   facet_wrap(~Universe) +
+#   US_EU_PF_colors + theme_bw()
+
+
+
+
+
+
+
+
+#SPOT RATES
 
 spot_rates <- read.csv("Data/Input/spot_rates.csv")
 
