@@ -1,6 +1,5 @@
 packages <- c('tidyverse','reshape2', 'lattice', 'gridExtra', 'xtable', 
               'splines', 'corrplot', 'kableExtra', 'stringr')
-library(patchwork)
 
 lapply(packages, require, character.only = TRUE)
 

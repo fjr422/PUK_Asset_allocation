@@ -1,6 +1,6 @@
 
 # Data-files from Python
-optimal_portfolio_strategies_return <- read.csv("Data/Active_portfolio/Output/optimal_portfolio_strategies_return.csv")
+optimal__chosen_assets_portfolio_strategies_values <- read.csv("Data/Active_portfolio/Output/optimal_chosen_assets_portfolio_strategies_values.csv")
 optimal_long_portfolio_strategies_values <- read.csv("Data/Active_portfolio/Output/optimal_long_portfolio_strategies_values.csv")
 optimal_short_portfolio_strategies_values <- read.csv("Data/Active_portfolio/Output/optimal_short_portfolio_strategies_values.csv")
 
@@ -37,9 +37,9 @@ US_EU_PF_colors <- scale_color_manual(
     "US Small Cap Stocks" = "#FB6A4A",
     "US SMB" = "#FBB4AE",
     "Risk Parity" = "#008000",
-    "Global Minimum Variance portfolio" = "#00FF00",
-    "Sharpe-portfolio" = "#8AFF8A",
-    "MV-portfolio" = "#8AFF8A"
+    "Global Minimum Variance portfolio" = "#00DD00",
+    "Sharpe-portfolio" = "#00FF00",
+    "Maximal historical return" = "#B8FFB8"
   )
 )
 
@@ -62,11 +62,13 @@ region_pf_names <- function(name){
   }
 }
 
+optimal__chosen_assets_portfolio_strategies_values$Strategy.ID %>% unique()
 
-optimal_portfolio_strategies_return %>%
-  mutate(Portfolio.name = plot_pf_names(Portfolio.name),
-         'Region' = sapply(Portfolio.name, region_pf_names)) %>%
-  ggplot(aes(x = as.Date(TIME_PERIOD), y = Value, color = Portfolio.name)) +
+
+optimal__chosen_assets_portfolio_strategies_values %>%
+  mutate(Strategy.ID = plot_pf_names(Strategy.ID),
+         'Region' = sapply(Strategy.ID, region_pf_names)) %>%
+  ggplot(aes(x = as.Date(TIME_PERIOD), y = Value, color = Strategy.ID)) +
   geom_line(size = .8) +
   labs(title = "Out-of-Sample Returns of Portfolio Strategies",
        x = "Time Period",
@@ -75,9 +77,9 @@ optimal_portfolio_strategies_return %>%
   US_EU_PF_colors + theme_bw()
 
 optimal_short_portfolio_strategies_values %>%
-  mutate(Portfolio.name = plot_pf_names(Portfolio.name),
-         'Region' = sapply(Portfolio.name, region_pf_names)) %>%
-  ggplot(aes(x = as.Date(TIME_PERIOD), y = Value, color = Portfolio.name)) +
+  mutate(Strategy.ID = plot_pf_names(Strategy.ID),
+         'Region' = sapply(Strategy.ID, region_pf_names)) %>%
+  ggplot(aes(x = as.Date(TIME_PERIOD), y = Value, color = Strategy.ID)) +
   geom_line(size = 1) +
   labs(title = "Out-of-Sample Returns of Portfolio Strategies",
        x = "Time Period",
@@ -116,12 +118,12 @@ a %>% filter(TIME_TO_MATURITY == 120) %>%
 
 
 Plot_ReturnsOfLongOnly <- optimal_long_portfolio_strategies_values %>%
-  filter(!(Portfolio.name %in% c('Global Minimum Variance portfolio',
+  filter(!(Strategy.ID %in% c('Global Minimum Variance portfolio',
                                    'Risk Parity',
                                    'Sharpe-portfolio'))) %>% 
-  mutate(Portfolio.name = plot_pf_names(Portfolio.name),
-         'Region' = sapply(Portfolio.name, region_pf_names)) %>%
-  ggplot(aes(x = as.Date(TIME_PERIOD), y = Value, color = Portfolio.name)) +
+  mutate(Strategy.ID = plot_pf_names(Strategy.ID),
+         'Region' = sapply(Strategy.ID, region_pf_names)) %>%
+  ggplot(aes(x = as.Date(TIME_PERIOD), y = Value, color = Strategy.ID)) +
   geom_line(size = .6) +
   labs(title = "Historic returns of the Long-Only Portfolios",
        x = "Time Period",
@@ -133,12 +135,12 @@ saveFig(Plot_ReturnsOfLongOnly, "R/Output/Plot_ReturnsOfLongOnly.pdf", 8, 5)
 
 
 Plot_ReturnsOfShortAndMarket <- optimal_short_portfolio_strategies_values %>%
-  filter(!(Portfolio.name %in% c('Global Minimum Variance portfolio',
+  filter(!(Strategy.ID %in% c('Global Minimum Variance portfolio',
                                  'Risk Parity',
                                  'Sharpe-portfolio'))) %>% 
-  mutate(Portfolio.name = plot_pf_names(Portfolio.name),
-         'Region' = sapply(Portfolio.name, region_pf_names)) %>%
-  ggplot(aes(x = as.Date(TIME_PERIOD), y = Value, color = Portfolio.name)) +
+  mutate(Strategy.ID = plot_pf_names(Strategy.ID),
+         'Region' = sapply(Strategy.ID, region_pf_names)) %>%
+  ggplot(aes(x = as.Date(TIME_PERIOD), y = Value, color = Strategy.ID)) +
   geom_line(size = .6) +
   labs(title = "Historic returns of the Short Portfolios (incl. Market)",
        x = "Time Period",
