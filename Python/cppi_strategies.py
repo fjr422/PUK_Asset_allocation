@@ -1,3 +1,5 @@
+import math
+
 import polars as pl
 import plotly.express as px
 
@@ -46,10 +48,10 @@ def get_sharpe(df: pl.DataFrame):
     ).agg(
         pl.col("Return").mean().alias("Avg"),
         pl.col("Return").var().alias("Var"),
-        ((pl.col("Return") < 0) * pl.col("Return")).var().alias("Var losses"),
     ).with_columns(
-        (pl.col("Avg") / pl.col("Var").sqrt()).alias("Sharpe"),
-        (pl.col("Avg") / pl.col("Var losses").sqrt()).alias("Sortino"),
+        (pl.col("Avg") / pl.col("Var").sqrt()).alias("Sharpe")
+    ).with_columns(
+        (pl.col("Sharpe") * math.sqrt(12)).alias("Annual sharpe")
     )
 
 sharpe_long = get_sharpe(long_values)

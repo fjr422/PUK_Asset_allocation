@@ -56,6 +56,7 @@ portfolio_universe = portfolio_strategies.PortfolioStrategy(fama_french_portfoli
 # Investable assets
 long_assets = (PortFolioRegion.TechUs, PortFolioRegion.MarketUs, PortFolioRegion.SmallCapUs, PortFolioRegion.TechEu, PortFolioRegion.MarketEu, PortFolioRegion.SmallCapEu)
 short_assets = (PortFolioRegion.MomEu, PortFolioRegion.MomUs, PortFolioRegion.SmbEu, PortFolioRegion.SmbUs, PortFolioRegion.MarketEu, PortFolioRegion.MarketUs, PortFolioRegion.RfEu)
+chosen_short_assets = (PortFolioRegion.MomEu, PortFolioRegion.MarketEu, PortFolioRegion.MarketUs, PortFolioRegion.RfEu)
 
 # Dates to make efficient frontier
 dates_efficient_frontier = pl.DataFrame(
@@ -68,8 +69,7 @@ dates_efficient_frontier = pl.DataFrame(
 optimal_strategies_long_assets = portfolio_strategies.PortfolioStrategyAnalysis(portfolio_universe, long_assets, dates_efficient_frontier)
 optimal_strategies_short_assets = portfolio_strategies.PortfolioStrategyAnalysis(portfolio_universe, short_assets, dates_efficient_frontier)
 optimal_strategies_chosen_assets = portfolio_strategies.PortfolioStrategyAnalysis(portfolio_universe, common_var.chosen_assets, dates_efficient_frontier)
-
-
+optimal_strategies_chosen_short_assets = portfolio_strategies.PortfolioStrategyAnalysis(portfolio_universe, chosen_short_assets, dates_efficient_frontier)
 
 
 
@@ -78,14 +78,20 @@ portfolio_universe.portfolio_universe_EUR.write_csv(portfolio_analysis_paths.por
 
 optimal_strategies_long_assets.optimal_strategies["Optimal strategies"].write_csv(portfolio_analysis_paths.optimal_portfolio_strategies_long)
 optimal_strategies_long_assets.optimal_strategies["Efficient frontier"].write_csv(portfolio_analysis_paths.efficient_frontiers_long)
+
 optimal_strategies_short_assets.optimal_strategies["Optimal strategies"].write_csv(portfolio_analysis_paths.optimal_portfolio_strategies_short)
 optimal_strategies_short_assets.optimal_strategies["Efficient frontier"].write_csv(portfolio_analysis_paths.efficient_frontiers_short)
+
 optimal_strategies_chosen_assets.optimal_strategies["Optimal strategies"].write_csv(portfolio_analysis_paths.optimal_portfolio_strategies_chosen_assets)
 optimal_strategies_chosen_assets.optimal_strategies["Efficient frontier"].write_csv(portfolio_analysis_paths.efficient_frontiers_chosen_assets)
+
+optimal_strategies_chosen_short_assets.optimal_strategies["Optimal strategies"].write_csv(portfolio_analysis_paths.optimal_portfolio_strategies_chosen_short_assets)
+optimal_strategies_chosen_short_assets.optimal_strategies["Efficient frontier"].write_csv(portfolio_analysis_paths.efficient_frontiers_chosen_short_assets)
 
 optimal_strategies_long_assets.values_active_portfolio.write_csv(portfolio_analysis_paths.optimal_long_portfolio_strategies_returns_path)
 optimal_strategies_short_assets.values_active_portfolio.write_csv(portfolio_analysis_paths.optimal_short_portfolio_strategies_returns_path)
 optimal_strategies_chosen_assets.values_active_portfolio.write_csv(portfolio_analysis_paths.optimal_chosen_assets_portfolio_strategies_returns_path)
+optimal_strategies_chosen_short_assets.values_active_portfolio.write_csv(portfolio_analysis_paths.optimal_chosen_short_assets_portfolio_strategies_returns_path)
 
 risk_free_returns.write_csv(portfolio_analysis_paths.tdf_returns_path)
 weights_tdf.write_csv(portfolio_analysis_paths.tdf_weights_path)
