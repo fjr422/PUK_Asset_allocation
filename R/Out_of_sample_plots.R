@@ -171,7 +171,7 @@ AllStrategies_W_OOS <- All_weights %>% mutate(Portfolio.strategy = factor(plot_p
                                    'Maximal historical return')) %>%
   ggplot(aes(x = as.Date(TIME_PERIOD), y = Weight, color = Portfolio)) +
   geom_line(size = .7, alpha = .7) +
-  labs(title = "Out-of-Sample Returns of Portfolio Strategies",
+  labs(title = "Out-of-Sample - Weights in Portfolio Strategies",
        x = "Date",
        y = "Weigths",
        color = "Portfolio Strategy") + 

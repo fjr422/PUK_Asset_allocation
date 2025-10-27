@@ -124,22 +124,53 @@ CPPI_analysis <- rbind(CPPI_terminal_values125, CPPI_terminal_values130,
                        CPPI_terminal_values135, CPPI_terminal_values140)
 
 
-CPPI_analysis %>%
+CPPI_distribution_analysis <- CPPI_analysis %>%
   filter(trigger_over_target %in% c(0.050, 0.100, 0.150, 0.200),
          m %in% c(1,2,3,4,5)) %>%
   ggplot(aes(x = Value, color = factor(m))) +
-  geom_density(size = .7, alpha = 0.2, position = "identity") +
+  geom_density(size = .7, alpha = 0.1, position = "identity") +
   facet_grid(rows = vars(L_target), cols = vars(trigger_over_target)) +
   labs(
-    title = "CPPI Strategy – Terminal Values for Different Multipliers",
+    title = "CPPI Strategy",
+    subtitle = expression("Terminal Values for Different " * L[trigger] * ", " * L[target] * " and CPPI Multipliers"),
     x = "Terminal Value",
     y = "Frequency",
-    color = "Multiplier (m)"
+    color = "CPPI Multiplier (m)"
   ) +
   theme_bw()
 
+saveFig(CPPI_distribution_analysis,"R/Output/CPPI_Distribution_Analysis.pdf", 12, 6)
 
 
+CPPI_G_distribution_analysis <- CPPI_analysis %>%
+  filter(trigger_over_target %in% c(0.050, 0.100, 0.150, 0.200),
+         m %in% c(1,2,3,4,5)) %>%
+  ggplot(aes(x = Value/Initial.guarantee, color = factor(m))) +
+  geom_density(size = .7, alpha = 0.1, position = "identity") +
+  facet_grid(rows = vars(L_target), cols = vars(trigger_over_target)) +
+  labs(
+    title = "CPPI Strategy",
+    subtitle = expression("Terminal return on initial guarantee for Different " * L[trigger] * ", " * L[target] * " and CPPI Multipliers"),
+    x = "Excess return on Initial Guarantee",
+    y = "Frequency",
+    color = "CPPI Multiplier (m)"
+  ) +
+  theme_bw() + scale_x_continuous(labels = scales::percent)
+
+CPPI_analysis %>%
+  filter(trigger_over_target %in% c(0.050, 0.100, 0.150, 0.200),
+         m %in% c(1,2,3,4,5)) %>%
+  ggplot(aes(x = (Value/Initial.guarantee-1), color = factor(m))) +
+  geom_density(size = .7, alpha = 0.1, position = "identity") +
+  facet_grid(rows = vars(L_target), cols = vars(trigger_over_target)) +
+  labs(
+    title = "CPPI Strategy",
+    subtitle = expression("Terminal Values for Different " * L[trigger] * ", " * L[target] * " and CPPI Multipliers"),
+    x = "Terminal Value",
+    y = "Frequency",
+    color = "CPPI Multiplier (m)"
+  ) +
+  theme_bw() + ylim(0,2) + scale_x_continuous(labels = scales::percent, limits = c(0,1.5))
 
 
 
