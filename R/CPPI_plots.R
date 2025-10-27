@@ -96,12 +96,47 @@ TI_Trigger_Target_analysis <- rbind(tie_in_trigger_125, tie_in_trigger_130, tie_
 
 #CPPI Strategy (Our Active PF)
 CPPI_terminal_values125 <- read.csv("Data/Active_reserve_strategy/Output/cppi_terminal_values1.25.csv") %>%
+  mutate(trigger_over_target = L_trigger - L_target) %>%
   mutate(m = factor(round(m,3)),
          L_target = factor(round(L_target,3)),
-         L_trigger = factor(round(L_trigger,3)))
+         L_trigger = factor(round(L_trigger,3)),
+         trigger_over_target = factor(round(trigger_over_target,3)))
+CPPI_terminal_values130 <- read.csv("Data/Active_reserve_strategy/Output/cppi_terminal_values1.3.csv") %>%
+  mutate(trigger_over_target = L_trigger - L_target) %>%
+  mutate(m = factor(round(m,3)),
+         L_target = factor(round(L_target,3)),
+         L_trigger = factor(round(L_trigger,3)),
+         trigger_over_target = factor(round(trigger_over_target,3)))
+CPPI_terminal_values135 <- read.csv("Data/Active_reserve_strategy/Output/cppi_terminal_values1.35.csv") %>%
+  mutate(trigger_over_target = L_trigger - L_target) %>%
+  mutate(m = factor(round(m,3)),
+         L_target = factor(round(L_target,3)),
+         L_trigger = factor(round(L_trigger,3)),
+         trigger_over_target = factor(round(trigger_over_target,3)))
+CPPI_terminal_values140 <- read.csv("Data/Active_reserve_strategy/Output/cppi_terminal_values1.4.csv") %>%
+  mutate(trigger_over_target = L_trigger - L_target) %>%
+  mutate(m = factor(round(m,3)),
+         L_target = factor(round(L_target,3)),
+         L_trigger = factor(round(L_trigger,3)),
+         trigger_over_target = factor(round(trigger_over_target,3)))
+
+CPPI_analysis <- rbind(CPPI_terminal_values125, CPPI_terminal_values130,
+                       CPPI_terminal_values135, CPPI_terminal_values140)
 
 
-
+CPPI_analysis %>%
+  filter(trigger_over_target %in% c(0.050, 0.100, 0.150, 0.200),
+         m %in% c(1,2,3,4,5)) %>%
+  ggplot(aes(x = Value, color = factor(m))) +
+  geom_density(size = .7, alpha = 0.2, position = "identity") +
+  facet_grid(rows = vars(L_target), cols = vars(trigger_over_target)) +
+  labs(
+    title = "CPPI Strategy – Terminal Values for Different Multipliers",
+    x = "Terminal Value",
+    y = "Frequency",
+    color = "Multiplier (m)"
+  ) +
+  theme_bw()
 
 
 
