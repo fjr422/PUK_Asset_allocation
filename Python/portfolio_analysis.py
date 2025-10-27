@@ -1,5 +1,4 @@
 import polars as pl
-import plotly.express as px
 
 import common_var
 import data

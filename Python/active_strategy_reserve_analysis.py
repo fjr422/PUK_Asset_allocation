@@ -2,7 +2,6 @@ import polars as pl
 import numpy as np
 from concurrent.futures import ProcessPoolExecutor
 import timeit
-import plotly.express as px
 
 import common_var
 import data
@@ -25,7 +24,7 @@ asset_names = tuple([names.value for names in common_var.chosen_assets])
 portfolio_universe_chosen = portfolio_strategies.PortfolioStrategy(fama_french_portfolios.filter(pl.col("N_Portfolios") == 6))
 
 chosen_active_reserve_strategy = active_reserve_strategy.ActiveReserveStrategy(asset_names, portfolio_universe_chosen, tdf_returns, tdf_weights, InvestmentStrategyPortfolios.RP)
-current_portfolio_strategy = active_reserve_strategy.ActiveReserveStrategy(asset_names, portfolio_universe_chosen, tdf_returns, tdf_weights, InvestmentStrategyPortfolios.MarketEu)
+current_portfolio_strategy = active_reserve_strategy.ActiveReserveStrategy(asset_names, portfolio_universe_chosen, tdf_returns, tdf_weights, InvestmentStrategyPortfolios.MarketEu) # Using EU Market
 
 chosen_active_reserve_strategy.active_reserve_strategy_return_input.portfolio_weights.write_csv(active_reserve_strategy_analysis_paths.active_reserve_weights_shifted_one_period_path)
 chosen_active_reserve_strategy.active_reserve_strategy_return_input.portfolio_returns.write_csv(active_reserve_strategy_analysis_paths.active_reserve_returns_path)
@@ -44,9 +43,9 @@ current_tie_in = current_portfolio_strategy.tie_in_strategies(l_target = common_
     )
 
 # Ranges for CPPI and L_trigger
-running_cppi_m = np.arange(2, 5, 0.2)
+running_cppi_m = np.arange(1, 5, 0.2)
 
-l_target = 1.35
+l_target = 1.25
 running_l_trigger = np.arange(l_target + 0.05 , l_target + 0.5, 0.025)
 b = 1.0
 
@@ -118,13 +117,13 @@ def extract_terminal(df: pl.DataFrame):
         ["Strategy ID", "Initial guarantee", "b", "m", "L_target", "L_trigger"]
     )
 
-current_tie_in_teminal_values = extract_terminal(current_tie_in)
+current_tie_in_terminal_values = extract_terminal(current_tie_in)
 cppi_terminal_values = extract_terminal(cppi_runs)
 tie_in_terminal_values = extract_terminal(tie_in_trigger_runs)
 
 # Output
 current_tie_in.write_csv(active_reserve_strategy_analysis_paths.current_tie_in_eu_market_analysis_path)
-current_tie_in_teminal_values.write_csv(active_reserve_strategy_analysis_paths.current_tie_in_eu_market_terminal_values_path)
+current_tie_in_terminal_values.write_csv(active_reserve_strategy_analysis_paths.current_tie_in_eu_market_terminal_values_path)
 
 cppi_runs.write_csv(active_reserve_strategy_analysis_paths.cppi_analysis_path(str(l_target)))
 cppi_terminal_values.write_csv(active_reserve_strategy_analysis_paths.cppi_terminal_values_path_target(str(l_target)))
