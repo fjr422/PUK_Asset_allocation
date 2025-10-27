@@ -647,7 +647,7 @@ LongPortfolios <- fama_french_portfolios %>% filter(TIME_PERIOD <= "2024-12-31",
   select(c(TIME_PERIOD, MR_US_excess, MR_EU_excess, SC_US_excess, SC_EU_excess, TS_US_excess, TS_EU_excess, RF_EU))
 
 
-cov_longportfolios <- cov(LongPortfolios %>% select(-TIME_PERIOD, -RF_EU))
+cov_longportfolios <- cov(LongPortfolios %>% select(c(MR_US_excess, TS_US_excess, MR_EU_excess, TS_EU_excess)))
 round(cov_longportfolios,2)
 
 cor(LongPortfolios %>% select(-TIME_PERIOD, -RF_EU) , method = "spearman") %>%
@@ -659,7 +659,7 @@ cor(LongPortfolios %>% select(-TIME_PERIOD, -RF_EU) , method = "spearman") %>%
 
 round(colMeans(LongPortfolios %>% select(-TIME_PERIOD)),4)
 
-#round(colMeans(LongPortfolios %>% select( WHAT TO SELECT?? ),4))
+round(colMeans(LongPortfolios %>% select(c(MR_US_excess, TS_US_excess, MR_EU_excess, TS_EU_excess))),2)
 
 
 

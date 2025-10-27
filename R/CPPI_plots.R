@@ -1,5 +1,122 @@
 # Active_Strategy_Reserve_Analysis in python should run before
 
+
+# Baseline (Current Tie-In):
+Current_TieIn_Terminal <- read.csv("Data/Active_reserve_strategy/Output/current_tie_in_EU_terminal_values.csv")
+Current_TieIn_Market <- read.csv("Data/Active_reserve_strategy/Output/current_tie_in_EU_analysis_Market.csv") %>% 
+  group_by(Strategy.ID, TIME_PERIOD) %>% mutate(W = sum(Value)) %>% ungroup()
+                                                
+
+#Histogram of Terminal W
+Plot_CurrentTerminalW <- Current_TieIn_Terminal %>% ggplot(aes(x = Value)) +
+  geom_histogram(bins = 15, fill = "gray77", color = "black") +
+  labs(title = "Current Tie-In System - Terminal Values",
+       x = "Terminal Value",
+       y = "Frequency") +
+  geom_vline(aes(xintercept = mean(Value)),
+             color = "blue", linetype = "dashed", size = .7) +
+  theme_bw()
+
+
+
+saveFig(Plot_CurrentTerminalW,"R/Output/Current_TieIn_Terminal_Values.pdf", 8, 5)
+
+#Histogram of Terminal W over Initial Guarantee
+Plot_CurrentTerminalW_over_IG <- Current_TieIn_Terminal %>% mutate(TermW_over_InitG = (Value - Initial.guarantee)/Initial.guarantee) %>%
+  ggplot(aes(x = TermW_over_InitG)) +
+  geom_histogram(bins = 15, fill = "gray77", color = "black") +
+  labs(title = "Current Tie-In System - Terminal Values over Initial Guarantee",
+       x = "Excess Return over Initial Guarantee",
+       y = "Frequency") +
+  scale_x_continuous(labels = scales::percent) +
+  geom_vline(aes(xintercept = mean(TermW_over_InitG)),
+             color = "blue", linetype = "dashed", size = .7) +
+  theme_bw()
+
+saveFig(Plot_CurrentTerminalW_over_IG,"R/Output/Current_TieIn_Terminal_Values_over_IG.pdf", 8, 5)
+
+#TDF values over time
+Current_TieIn_Market %>% group_by(Strategy.ID,TIME_PERIOD) %>% summarize(Value = sum(Value)) %>%
+  ggplot(aes(x = as.Date(TIME_PERIOD), y = Value, color = Strategy.ID)) +
+  geom_line(size = .5) + 
+  labs(title = "Current Tie-In System - TDF Values Over Time",
+       x = "Date",
+       y = "TDF value",
+       color = "Portfolio Strategy") +
+  theme_bw() + guides(color = FALSE)
+
+#Initial Guarantee over time (Current Tie-in)
+tdf_returns %>% filter(TIME_TO_MATURITY == 120) %>% mutate(IG = 80/ZC) %>%
+  ggplot(aes(x = as.Date(TIME_PERIOD), y = IG)) +
+  geom_line(size = .7) +
+  labs(title = "Initial Guarantee over Time",
+       x = "Date",
+       y = "Initial Guarantee") +
+  theme_bw()
+
+
+# New Tie-In Strategy (Our Active PF)
+tie_in_trigger_125 <- read.csv("Data/Active_reserve_strategy/Output/tie_in_trigger_terminal_values1.25.csv") %>% 
+  mutate(L_trigger = round(L_trigger,3),
+         L_target = round(L_target,3))
+tie_in_trigger_130 <- read.csv("Data/Active_reserve_strategy/Output/tie_in_trigger_terminal_values1.3.csv") %>% 
+  mutate(L_trigger = round(L_trigger,3),
+         L_target = round(L_target,3))
+
+tie_in_trigger_135 <- read.csv("Data/Active_reserve_strategy/Output/tie_in_trigger_terminal_values1.35.csv") %>% 
+  mutate(L_trigger = round(L_trigger,3),
+         L_target = round(L_target,3))
+tie_in_trigger_140 <- read.csv("Data/Active_reserve_strategy/Output/tie_in_trigger_terminal_values1.4.csv") %>% 
+  mutate(L_trigger = round(L_trigger,3),
+         L_target = round(L_target,3))
+
+
+tie_in_trigger_125 %>% filter(L_trigger == 1.300) %>%
+  ggplot(aes(x = Value)) + 
+  geom_histogram(fill = "gray77", color = "black", bins = 15) +
+  labs(title = "Tie-In Strategy (L_trigger = 1.3) - Terminal Values",
+       x = "Terminal Value",
+       y = "Frequency") +
+  theme_bw()
+
+
+TI_Trigger_Target_analysis <- rbind(tie_in_trigger_125, tie_in_trigger_130, tie_in_trigger_135, tie_in_trigger_140) %>% 
+  mutate(trigger_over_target = L_trigger - L_target) %>% 
+  filter(round(trigger_over_target,3) %in% c(0.050,0.100,0.150,0.200)) %>%
+  mutate(trigger_over_target = as.factor(round(trigger_over_target,3))) %>%
+  ggplot(aes(x = Value, fill = factor(L_target))) +
+  geom_histogram(color = "black", bins = 15) +
+  facet_grid(rows = vars(L_target), cols = vars(trigger_over_target)) +
+  labs(title = "Tie-In Strategy - Terminal Values for Different Trigger Levels",
+       x = "Terminal Value",
+       y = "Frequency") +
+  theme_bw() + guides(fill = FALSE)
+
+
+
+#CPPI Strategy (Our Active PF)
+CPPI_terminal_values125 <- read.csv("Data/Active_reserve_strategy/Output/cppi_terminal_values1.25.csv") %>%
+  mutate(m = factor(round(m,3)),
+         L_target = factor(round(L_target,3)),
+         L_trigger = factor(round(L_trigger,3)))
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
 CPPI_terminal <- read.csv("Data/Active_reserve_strategy/Output/cppi_terminal_values.csv")
 TI_terminal <- read.csv("Data/Active_reserve_strategy/Output/tie_in_trigger_terminal_values.csv")
 
@@ -20,5 +137,6 @@ TI_terminal %>% mutate(L_trigger = round(L_trigger,2)) %>% filter(L_trigger %in%
        y = "Terminal TI Value") +
   theme_bw()
   
+
 
 
