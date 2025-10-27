@@ -43,9 +43,9 @@ current_tie_in = current_portfolio_strategy.tie_in_strategies(l_target = common_
     )
 
 # Ranges for CPPI and L_trigger
-running_cppi_m = np.arange(2, 5, 0.2)
+running_cppi_m = np.arange(1, 5, 0.2)
 
-l_target = 1.35
+l_target = 1.25
 running_l_trigger = np.arange(l_target + 0.05 , l_target + 0.5, 0.025)
 b = 1.0
 

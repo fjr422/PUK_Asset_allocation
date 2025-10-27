@@ -19,7 +19,7 @@ chosen_assets_values = pl.read_csv(portfolio_analysis_paths.optimal_chosen_asset
 )
 
 all_values = pl.concat([long_values, short_values, chosen_assets_values])
-px.line(all_values, x = "TIME_PERIOD", y = "Value", color = "Strategy ID", facet_col = "Universe", title="Values").show()
+#px.line(all_values, x = "TIME_PERIOD", y = "Value", color = "Strategy ID", facet_col = "Universe", title="Values").show()
 
 long_weights = pl.read_csv(portfolio_analysis_paths.optimal_portfolio_strategies_long).with_columns(
     pl.lit("Long assets").alias("Universe")
@@ -35,7 +35,7 @@ all_weights = pl.concat([long_weights, short_weights, chosen_weights]).filter(
     pl.col("Portfolio strategy").is_in([PortFolioRegion.RP.value, PortFolioRegion.GlobalMV.value, PortFolioRegion.Sharpe.value, PortFolioRegion.MaxReturn.value])
 )
 
-px.line(all_weights, x = "TIME_PERIOD", y = "Weight", color = "Portfolio", facet_col = "Universe", facet_row="Portfolio strategy", title="Weights").show()
+# px.line(all_weights, x = "TIME_PERIOD", y = "Weight", color = "Portfolio", facet_col = "Universe", facet_row="Portfolio strategy", title="Weights").show()
 
 # Strategies and fund performance
 def get_sharpe(df: pl.DataFrame):
@@ -61,6 +61,9 @@ cppi_terminal_values = pl.scan_csv(active_reserve_strategy_paths.cppi_terminal_v
 
 tie_in_terminal_values = pl.scan_csv(active_reserve_strategy_paths.tie_in_terminal_values_base_path + "*.csv", try_parse_dates=True).collect()
 tie_in_current = pl.read_csv(active_reserve_strategy_paths.current_tie_in_eu_market_terminal_values_path, try_parse_dates=True)
+
+px.histogram(tie_in_current, x = "Value").show()
+px.histogram(cppi_terminal_values.filter((pl.col("L_target").round(3) == 1.30) & (pl.col("L_trigger").round(3) == 1.350) & (pl.col("m").round(2) == 3)), x = "Value").show()
 
 cppi_group_m = cppi_terminal_values.with_columns(
     (pl.col("Value") / pl.col("Initial guarantee")).alias("Terminal to initial")
