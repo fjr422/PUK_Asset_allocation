@@ -2,11 +2,15 @@
 
 
 # Baseline (Current Tie-In):
-Current_TieIn_Terminal <- read.csv("Data/Active_reserve_strategy/Output/current_tie_in_EU_terminal_values.csv")
+Current_TieIn_Terminal <- read.csv("Data/Active_reserve_strategy/Output/current_tie_in_EU_terminal_values.csv") %>%
+  mutate(ActivePF = "Current Active Portfolio")
 Current_TieIn_Market <- read.csv("Data/Active_reserve_strategy/Output/current_tie_in_EU_analysis_Market.csv") %>% 
   group_by(Strategy.ID, TIME_PERIOD) %>% mutate(W = sum(Value)) %>% ungroup()
-                                                
+                       
 
+Current_TieIn_Terminal$Value %>% summary()
+Current_TieIn_Terminal %>% mutate(TermW_over_InitG = (Value - Initial.guarantee)/Initial.guarantee) %>% summary()
+                         
 #Histogram of Terminal W
 Plot_CurrentTerminalW <- Current_TieIn_Terminal %>% ggplot(aes(x = Value)) +
   geom_histogram(bins = 15, fill = "gray77", color = "black") +
@@ -15,6 +19,23 @@ Plot_CurrentTerminalW <- Current_TieIn_Terminal %>% ggplot(aes(x = Value)) +
        y = "Frequency") +
   geom_vline(aes(xintercept = mean(Value)),
              color = "blue", linetype = "dashed", size = .7) +
+  theme_bw()
+
+
+tie_in_trigger_125 %>% filter(L_trigger == 1.300) %>% mutate(ActivePF = "Recommended Active Portfolio") %>%
+  rbind(Current_TieIn_Terminal) %>%
+  ggplot(aes(x = Value, fill = ActivePF)) +
+  geom_histogram(position = "identity", alpha = 0.6, bins = 15, color = "black") +
+  geom_vline(data = . %>% group_by(ActivePF) %>% summarize(mean_Value = mean(Value)),
+             aes(xintercept = mean_Value, color = ActivePF),
+             linetype = "dashed", size = .7) +
+  labs(title = "Terminal Values Comparison",
+       x = "Terminal Value",
+       y = "Frequency",
+       fill = "Portfolio") +
+  scale_fill_manual(values = c("Current Active Portfolio" = "gray55", "Recommended Active Portfolio" = "#0000FF")) +
+  scale_color_manual(values = c("Current Active Portfolio" = "gray55", "Recommended Active Portfolio" = "#0000FF")) +
+  guides(color = FALSE) +
   theme_bw()
 
 
@@ -93,6 +114,22 @@ TI_Trigger_Target_analysis <- rbind(tie_in_trigger_125, tie_in_trigger_130, tie_
   theme_bw() + guides(fill = FALSE)
 
 
+Initial_G_distr <- rbind(tie_in_trigger_125, tie_in_trigger_130, tie_in_trigger_135, tie_in_trigger_140) %>% 
+  select(c(L_target, Initial.guarantee)) %>% distinct() %>%
+  ggplot(aes(y = Initial.guarantee)) +
+  geom_density(size = .7, fill = "black", alpha = 0.1, position = "identity") +
+  labs(
+    title = "Tie-In Strategy",
+    subtitle = "Initial Guarantee for Different Target Levels",
+    x = "Target Level",
+    y = "Initial Guarantee"
+  ) + facet_grid(cols = vars(L_target)) + ylim(70,140) + scale_x_continuous(breaks = c(0.0, 0.02, 0.04)) + 
+  theme_bw()
+
+
+saveFig(Initial_G_distr, "R/Output/TI_Initial_Guarantee_Distribution.pdf", 10, 5)
+
+
 
 #CPPI Strategy (Our Active PF)
 CPPI_terminal_values125 <- read.csv("Data/Active_reserve_strategy/Output/cppi_terminal_values1.25.csv") %>%
@@ -145,7 +182,7 @@ saveFig(CPPI_distribution_analysis,"R/Output/CPPI_Distribution_Analysis.pdf", 12
 CPPI_G_distribution_analysis <- CPPI_analysis %>%
   filter(trigger_over_target %in% c(0.050, 0.100, 0.150, 0.200),
          m %in% c(1,2,3,4,5)) %>%
-  ggplot(aes(x = Value/Initial.guarantee, color = factor(m))) +
+  ggplot(aes(x = Value/Initial.guarantee-1, color = factor(m))) +
   geom_density(size = .7, alpha = 0.1, position = "identity") +
   facet_grid(rows = vars(L_target), cols = vars(trigger_over_target)) +
   labs(
@@ -156,6 +193,8 @@ CPPI_G_distribution_analysis <- CPPI_analysis %>%
     color = "CPPI Multiplier (m)"
   ) +
   theme_bw() + scale_x_continuous(labels = scales::percent)
+
+saveFig(CPPI_G_distribution_analysis,"R/Output/CPPI_G_Distribution_Analysis.pdf", 12, 6)
 
 CPPI_analysis %>%
   filter(trigger_over_target %in% c(0.050, 0.100, 0.150, 0.200),
@@ -171,6 +210,10 @@ CPPI_analysis %>%
     color = "CPPI Multiplier (m)"
   ) +
   theme_bw() + ylim(0,2) + scale_x_continuous(labels = scales::percent, limits = c(0,1.5))
+
+
+
+
 
 
 

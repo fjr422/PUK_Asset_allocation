@@ -503,13 +503,13 @@ FactorPortfolios <- fama_french_portfolios %>% filter(TIME_PERIOD <= "2024-12-31
 
 SummaryFactorPFs <- FactorPortfolios %>% pivot_longer(cols = -TIME_PERIOD, names_to = "Portfolio", values_to = "Return") %>%
   group_by(Portfolio) %>%
-  summarize(Mean = mean(Return),
+  summarize(Mean = mean(Return/100),
             Min. = min(Return),
             Q1 = quantile(Return, 0.25),
             Median = median(Return),
             Q3 = quantile(Return, 0.75),
             Max. = max(Return),
-            Volatility = sd(Return)
+            Volatility = sd(Return/100)
   ) %>% mutate(Portfolio = factor(Portfolio, levels = c("MKT_EU", "MKT_US", "MOM_EU", "MOM_US", "SMB_EU", "SMB_US", "Tech_EU","Tech_US", "SmallCap_EU", "SmallCap_US", "RF_EU" ))) %>%
   arrange(Portfolio)
 
@@ -532,7 +532,9 @@ Mean_Vol_plot <- Mean_Vol_data %>%
                              formula = y ~ 0 + x,   # force intercept = 0
                              se = FALSE,
                              color = "gray77") + 
-  geom_text(vjust = -0.5, hjust = 0.5) + xlim(-.3,7) + ylim(-.05,1.1) + 
+  geom_text(vjust = -0.5, hjust = 0.5) + 
+  scale_x_continuous(labels = scales::percent, limits = c(0.00,.065)) +
+  scale_y_continuous(labels = scales::percent, limits = c(0.00,0.010))+
   labs(title = "Portfolios: Mean vs. Volatility",
        x = "Volatility",
        y = "Mean Return") + theme_bw()
@@ -552,8 +554,8 @@ Mean_Vol_plot_with_table <- gridExtra::grid.arrange(
   Mean_Vol_plot,
   gridExtra::tableGrob(
     Mean_Vol_data %>%
-      mutate(Mean = paste0(round(Mean, 2), "%"),
-             Volatility = round(Volatility,2)) %>% select(Portfolio, "Mean Return" = Mean, Volatility) %>%  # format as %
+      mutate(Mean = paste0(round(100*Mean, 2), "%"),
+             Volatility = paste0(round(100*Volatility,2),"%"))%>% select(Portfolio, "Mean Return" = Mean, Volatility) %>%  # format as %
       tibble::column_to_rownames("Portfolio") %>%
       t() %>%
       as.data.frame() %>%
@@ -567,8 +569,6 @@ Mean_Vol_plot_with_table <- gridExtra::grid.arrange(
   ncol = 1,
   heights = c(3, 0.8)  # Adjust the relative space for plot vs. table
 )
-
-
 
 
 Mean_Vol_table %>%
@@ -610,8 +610,8 @@ MKT_TECH_SMALL_corplot <- cor(FactorPortfolios %>% select(c("EU Market" = MKT_EU
 
 
 # before shorting restriction: MKT_US and MOM_EU
-round(cov(FactorPortfolios %>% select(MKT_US, MOM_EU)),2)
-round(colMeans(FactorPortfolios %>% select(MKT_US, MOM_EU)),2)
+round(cov(FactorPortfolios %>% select(MKT_US, MKT_EU,MOM_EU)),2)
+round(colMeans(FactorPortfolios %>% select(MKT_US, MKT_EU, MOM_EU)),2)
 
 summary(FactorPortfolios %>% select(-TIME_PERIOD))
 

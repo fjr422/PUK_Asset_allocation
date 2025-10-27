@@ -1,18 +1,21 @@
 
 # Data-files from Python
-optimal__chosen_assets_portfolio_strategies_values <- read.csv("Data/Active_portfolio/Output/optimal_chosen_assets_portfolio_strategies_values.csv") %>%
-  mutate(Universe = "Chosen Assets")
+optimal_chosen_assets_portfolio_strategies_values <- read.csv("Data/Active_portfolio/Output/optimal_chosen_assets_portfolio_strategies_values.csv") %>%
+  mutate(Universe = "Chosen Long Assets")
 optimal_long_portfolio_strategies_values <- read.csv("Data/Active_portfolio/Output/optimal_long_portfolio_strategies_values.csv") %>% 
   mutate(Universe = "Long Assets")
 optimal_short_portfolio_strategies_values <- read.csv("Data/Active_portfolio/Output/optimal_short_portfolio_strategies_values.csv") %>%
   mutate(Universe = "Short Assets")
+optimal_chosen_short_assets_portfolio_strategies_values <- read.csv("Data/Active_portfolio/Output/optimal_chosen_short_assets_portfolio_strategies_values.csv") %>%
+  mutate(Universe = "Chosen Short Assets")
 
 tdf_returns <- read.csv("Data/Active_portfolio/Output/tdf_returns.csv")
 tdf_weights <- read.csv("Data/Active_portfolio/Output/tdf_weights.csv")
 
 All_portfolio_strategies_values <- rbind(optimal_long_portfolio_strategies_values,
                                          optimal_short_portfolio_strategies_values,
-                                         optimal__chosen_assets_portfolio_strategies_values)
+                                         optimal_chosen_assets_portfolio_strategies_values,
+                                         optimal_chosen_short_assets_portfolio_strategies_values)
 
 
 
@@ -28,8 +31,11 @@ Short_weights <- read.csv("Data/Active_portfolio/Input/portfolio_strategies_shor
 Chosen_weights <- read.csv("Data/Active_portfolio/Input/portfolio_strategies_chosen_assets.csv") %>%
   mutate(Universe = "Chosen Assets")
 
+Short_chosen_weights <- read.csv("Data/Active_portfolio/Input/portfolio_strategies_chosen_short_assets.csv") %>%
+  mutate(Universe = "Chosen Short Assets")
 
-All_weights <- rbind(Long_weights, Short_weights, Chosen_weights)
+
+All_weights <- rbind(Long_weights, Short_weights, Chosen_weights, Short_chosen_weights)
 
 # Recode PF names, to be descriptive for the report
 plot_pf_names <- function(name){
@@ -119,10 +125,10 @@ asset_pfs <- c(
   "US SMB"
 )
 
-optimal__chosen_assets_portfolio_strategies_values$Strategy.ID %>% unique()
+optimal_chosen_assets_portfolio_strategies_values$Strategy.ID %>% unique()
 
 
-optimal__chosen_assets_portfolio_strategies_values %>%
+optimal_chosen_assets_portfolio_strategies_values %>%
   mutate(Strategy.ID = factor(plot_pf_names(Strategy.ID), levels = pf_levels),                              ,
          'Region' = sapply(Strategy.ID, region_pf_names)) %>%
   ggplot(aes(x = as.Date(TIME_PERIOD), y = Value, color = Strategy.ID)) +
@@ -157,8 +163,8 @@ AllStrategies_OOS <- All_portfolio_strategies_values %>% mutate(Strategy.ID = fa
        x = "Date",
        y = "Value",
        color = "Portfolio Strategy") + 
-  facet_wrap(~Universe) +
-  US_EU_PF_colors + theme_bw()
+  facet_wrap(~Universe, nrow = 1) +
+  US_EU_PF_colors + theme_bw()+ theme(legend.position = "bottom")
 
 saveFig(AllStrategies_OOS, "R/Output/AllStrategies_OOS.pdf", 12, 6)
 
