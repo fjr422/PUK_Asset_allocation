@@ -223,15 +223,16 @@ IG_Ltarget_Period_plot <- a %>% filter(TIME_TO_MATURITY == 120, TIME_PERIOD > "2
                                     names_to = "Ltarget",
                                     values_to = "ValueToReserve") %>%
   select(c(TIME_PERIOD, ZCB_price, Ltarget, ValueToReserve, Period)) %>% mutate(IG = ValueToReserve/ZCB_price) %>%
-  ggplot(aes(y = IG, x=after_stat(count))) +
-  geom_density(fill = "black", alpha = 0.1, size = .3) +
-  facet_grid(rows = vars(Period), cols = vars(Ltarget)) +
+  ggplot(aes(x = IG, y=after_stat(count))) +
+  geom_density(fill = "black", alpha = 0.1, size = .2) +
+  facet_grid(rows = vars(Ltarget), cols = vars(Period)) +
   labs(title = expression("Distribution of Initial Guarantees for 10-Year ZCBs for Different Periods and, "~L[target]),
-       x = "Observation Count Density",
-       y = "Initial Guarantee") +ylim(60,140) + scale_x_continuous(breaks = c(1,3,5)) + 
+       x = "Initial Guarantee",
+       y = "Observation Count Density") + 
+  scale_y_continuous(breaks = c(0,3,6)) +
   theme_bw()
 
-saveFig(IG_Ltarget_Period_plot, "R/Output/IG_Ltarget_Period_plot.pdf", 10, 6)
+saveFig(IG_Ltarget_Period_plot, "R/Output/IG_Ltarget_Period_plot.pdf", 10, 5)
 
 
 
