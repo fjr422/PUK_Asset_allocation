@@ -22,10 +22,10 @@ Plot_CurrentTerminalW <- Current_TieIn_Terminal %>% ggplot(aes(x = Value)) +
   theme_bw()
 
 
-tie_in_trigger_125 %>% filter(L_trigger == 1.300) %>% mutate(ActivePF = "Recommended Active Portfolio") %>%
+Plot_CurrentTerminalW <- tie_in_trigger_125 %>% filter(L_trigger == 1.300) %>% mutate(ActivePF = "Recommended Active Portfolio") %>%
   rbind(Current_TieIn_Terminal) %>%
   ggplot(aes(x = Value, fill = ActivePF)) +
-  geom_histogram(position = "identity", alpha = 0.6, bins = 15, color = "black") +
+  geom_histogram(position = "identity", alpha = 0.6, bins = 15, color = "black", size= .2) +
   geom_vline(data = . %>% group_by(ActivePF) %>% summarize(mean_Value = mean(Value)),
              aes(xintercept = mean_Value, color = ActivePF),
              linetype = "dashed", size = .7) +
@@ -35,7 +35,7 @@ tie_in_trigger_125 %>% filter(L_trigger == 1.300) %>% mutate(ActivePF = "Recomme
        fill = "Portfolio") +
   scale_fill_manual(values = c("Current Active Portfolio" = "gray55", "Recommended Active Portfolio" = "#0000FF")) +
   scale_color_manual(values = c("Current Active Portfolio" = "gray55", "Recommended Active Portfolio" = "#0000FF")) +
-  guides(color = FALSE) +
+  guides(color = FALSE, fill = FALSE) +
   theme_bw()
 
 
@@ -53,6 +53,41 @@ Plot_CurrentTerminalW_over_IG <- Current_TieIn_Terminal %>% mutate(TermW_over_In
   geom_vline(aes(xintercept = mean(TermW_over_InitG)),
              color = "blue", linetype = "dashed", size = .7) +
   theme_bw()
+
+Plot_CurrentTerminalW_over_IG <- tie_in_trigger_125 %>% filter(L_trigger == 1.300) %>% mutate(ActivePF = "Recommended Active Portfolio") %>%
+  rbind(Current_TieIn_Terminal) %>% mutate(TermW_over_InitG = (Value - Initial.guarantee)/Initial.guarantee) %>%
+  ggplot(aes(x = TermW_over_InitG, fill = ActivePF)) +
+  geom_histogram(position = "identity", alpha = 0.6, bins = 15, color = "black", size = .2) +
+  geom_vline(data = . %>% group_by(ActivePF) %>% summarize(mean_Value = mean(TermW_over_InitG)),
+             aes(xintercept = mean_Value, color = ActivePF),
+             linetype = "dashed", size = .7) +
+  labs(title = "Excess Return Comparison",
+       x = "Excess Return on Initial Guarantee",
+       y = "Frequency",
+       fill = "Portfolio") +
+  scale_fill_manual(values = c("Current Active Portfolio" = "gray55", "Recommended Active Portfolio" = "#0000FF")) +
+  scale_color_manual(values = c("Current Active Portfolio" = "gray55", "Recommended Active Portfolio" = "#0000FF")) +
+  scale_x_continuous(labels = scales::percent) +
+  guides(color = FALSE) +
+  theme_bw()
+
+CurrentTIplot <- grid.arrange(
+  Plot_CurrentTerminalW,
+  Plot_CurrentTerminalW_over_IG,
+  ncol = 2,
+  widths = c(1, 1.58) 
+)
+
+tie_in_trigger_125 %>% filter(L_trigger == 1.300) %>% mutate(ActivePF = "Recommended Active Portfolio") %>%
+  rbind(Current_TieIn_Terminal) %>% mutate(TermW_over_InitG = (Value - Initial.guarantee)/Initial.guarantee) %>% group_by(ActivePF) %>%
+  summarize(minWtoG = min(TermW_over_InitG),
+            meanWtoG = mean(TermW_over_InitG),
+            maxWtoG = max(TermW_over_InitG),
+            minW = min(Value),
+            meanW = mean(Value),
+            maxW = max(Value))
+
+
 
 saveFig(Plot_CurrentTerminalW_over_IG,"R/Output/Current_TieIn_Terminal_Values_over_IG.pdf", 8, 5)
 
@@ -125,6 +160,8 @@ Initial_G_distr <- rbind(tie_in_trigger_125, tie_in_trigger_130, tie_in_trigger_
     y = "Initial Guarantee"
   ) + facet_grid(cols = vars(L_target)) + ylim(70,140) + scale_x_continuous(breaks = c(0.0, 0.02, 0.04)) + 
   theme_bw()
+
+
 
 
 saveFig(Initial_G_distr, "R/Output/TI_Initial_Guarantee_Distribution.pdf", 10, 5)

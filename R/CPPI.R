@@ -21,21 +21,19 @@ Current_TieIn_System <- function(L_trigger, L_target, T = 10) {
   for (pf in portfolios) {
     t <- t + 1
     
-    # Subset this term-structure dataset
     tdf <- tdf_returns %>% filter(Portfolio == pf)
     
-    # Preallocate
     A <- R <- G <- L <- W <- numeric(n + 1)
     Date <- Current_Active$TIME_PERIOD[t:(n + t)]
     
-    # Initial conditions
+    # Initial
     A[1] <- initial * (1 - initial / L_target)
     R[1] <- initial - A[1]
     G[1] <- R[1] / tdf$ZC[1]
     L[1] <- (A[1] + R[1]) / R[1]
     W[1] <- A[1] + R[1]
     
-    # Loop over months
+    #Each time step
     for (i in 1:n) {
       A[i + 1] <- (1 + Current_Active$EU_EQ[i + t] / 100) * A[i]
       R[i + 1] <- R[i] * (1 + tdf$Return[i + 1] / 100)
@@ -44,14 +42,13 @@ Current_TieIn_System <- function(L_trigger, L_target, T = 10) {
       L[i + 1] <- W[i + 1] / R[i + 1]
       G[i + 1] <- R[i + 1] / tdf$ZC[i + 1]
       
-      # Trigger condition
+      #Trigger
       if (L[i + 1] > L_trigger/100) {
         A[i + 1] <- (1 - initial / L_target) * W[i + 1]
         R[i + 1] <- W[i + 1] - A[i + 1]
       }
     }
     
-    # Store this portfolio’s results
     results_list[[pf]] <- data.frame(
       Portfolio = pf,
       Date = as.Date(Date),
@@ -63,7 +60,6 @@ Current_TieIn_System <- function(L_trigger, L_target, T = 10) {
     )
   }
   
-  # Combine all portfolios into one data frame
   results_all <- dplyr::bind_rows(results_list)
   
   return(results_all)
@@ -99,7 +95,8 @@ saveFig(
 
 
 #rebalancing events
-Current_Baseline %>% filter(L > 1.3) %>% group_by(Portfolio) %>% summarise(n = n()) # of rebalancing events per portfolio
+Current_Baseline %>% filter(L > 1.3) %>% group_by(Portfolio) %>% summarise(n = n()) %>% 
+  ggplot(aes(x = Portfolio, y = n)) + geom_col() # of rebalancing events per portfolio
 Current_Baseline %>% filter(L > 1.3) %>% summarise(n = n()) # total number of rebalancing events
 
 
@@ -175,14 +172,12 @@ CPPI_System <- function(Active_PF, L_trigger, L_target, m, T = 10) {
   for (pf in portfolios) {
     t <- t + 1
     
-    # Subset this term-structure dataset
     tdf <- tdf_returns %>% filter(Portfolio == pf)
     
-    # Preallocate
     A <- R <- G <- L <- W <- F <- numeric(n + 1)
     Date <- Active_PF$TIME_PERIOD[t:(n + t)]
     
-    # Initial conditions
+    #Initial 
     F[1] <- initial * (initial / L_target)
     C <- initial - F[1]
     E <- m * C
@@ -192,7 +187,7 @@ CPPI_System <- function(Active_PF, L_trigger, L_target, m, T = 10) {
     W[1] <- A[1] + R[1]
     L[1] <- W[1] / F[1]
     
-    # Loop over months
+    #time step
     for (i in 1:n) {
       A[i + 1] <- (1 + Active_PF$Return[i + t] / 100) * A[i]
       R[i + 1] <- R[i] * (1 + tdf$Return[i + 1] / 100)
@@ -202,7 +197,7 @@ CPPI_System <- function(Active_PF, L_trigger, L_target, m, T = 10) {
       L[i + 1] <- W[i + 1] / F[i + 1]
       G[i + 1] <- F[i + 1] / tdf$ZC[i + 1]
       
-      # Trigger condition
+      # Trigger 
       if (L[i + 1] > L_trigger/100) {
         C <- W[i + 1] - F[i+1]
         E <- m * C
@@ -211,7 +206,6 @@ CPPI_System <- function(Active_PF, L_trigger, L_target, m, T = 10) {
       }
     }
     
-    # Store this portfolio’s results
     results_list[[pf]] <- data.frame(
       Portfolio = pf,
       Date = as.Date(Date),
@@ -224,7 +218,6 @@ CPPI_System <- function(Active_PF, L_trigger, L_target, m, T = 10) {
     )
   }
   
-  # Combine all portfolios into one data frame
   results_all <- dplyr::bind_rows(results_list)
   
   return(results_all)

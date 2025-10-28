@@ -191,6 +191,7 @@ saveFig(AllStrategies_W_OOS, "R/Output/AllStrategies_W_OOS.pdf", 11, 6)
 
 
 
+
 #SPOT RATES
 
 spot_rates <- read.csv("Data/Input/spot_rates.csv")
@@ -201,7 +202,7 @@ a <- spot_rates %>%
                                      exp(-(TIME_TO_MATURITY/12)/TAU1) ) + 
                         BETA3 * ( (1 - exp(-(TIME_TO_MATURITY/12)/TAU2) ) / ((TIME_TO_MATURITY/12)/TAU2) - 
                                      exp(-(TIME_TO_MATURITY/12)/TAU2)) ,
-         ZCB_price = exp(-spot/100 * (TIME_TO_MATURITY/12))
+         ZCB_price = exp(-SPOTRATE/100 * (TIME_TO_MATURITY/12))
          )
 
 a %>% ggplot(aes(x = TIME_TO_MATURITY/12, y = ZCB_price, color = TIME_PERIOD)) +
@@ -212,6 +213,28 @@ a %>% ggplot(aes(x = TIME_TO_MATURITY/12, y = ZCB_price, color = TIME_PERIOD)) +
        color = "Date") +
   xlim(10,0) + 
   theme_bw() + guides(color = FALSE)
+
+IG_Ltarget_Period_plot <- a %>% filter(TIME_TO_MATURITY == 120, TIME_PERIOD > "2007-08-01", TIME_PERIOD < "2025-01-01")  %>%
+  mutate('1.25' = 100*100/125,
+         '1.30' = 100*100/130,
+         '1.35' = 100*100/135,
+         '1.40' = 100*100/140,
+         Period = ifelse(TIME_PERIOD < "2015-01-01", '2007-2015', ifelse(TIME_PERIOD < "2023-01-01", '2015-2023', '2023-2025'))) %>% pivot_longer(cols = c('1.25', '1.30', '1.35', '1.40'),
+                                    names_to = "Ltarget",
+                                    values_to = "ValueToReserve") %>%
+  select(c(TIME_PERIOD, ZCB_price, Ltarget, ValueToReserve, Period)) %>% mutate(IG = ValueToReserve/ZCB_price) %>%
+  ggplot(aes(y = IG, x=after_stat(count))) +
+  geom_density(fill = "black", alpha = 0.1, size = .3) +
+  facet_grid(rows = vars(Period), cols = vars(Ltarget)) +
+  labs(title = expression("Distribution of Initial Guarantees for 10-Year ZCBs for Different Periods and, "~L[target]),
+       x = "Observation Count Density",
+       y = "Initial Guarantee") +ylim(60,140) + scale_x_continuous(breaks = c(1,3,5)) + 
+  theme_bw()
+
+saveFig(IG_Ltarget_Period_plot, "R/Output/IG_Ltarget_Period_plot.pdf", 10, 6)
+
+
+
 
 Plot_Priceof100ZCB <- a %>% filter(TIME_TO_MATURITY == 120) %>% 
   ggplot(aes(x = as.Date(TIME_PERIOD), y = 100*ZCB_price)) +
