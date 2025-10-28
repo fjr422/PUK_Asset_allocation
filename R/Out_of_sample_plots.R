@@ -1,12 +1,12 @@
 # Data-files from Python
 optimal_chosen_assets_portfolio_strategies_values <- read.csv("Data/Active_portfolio/Output/optimal_chosen_assets_portfolio_strategies_values.csv") %>%
-  mutate(Universe = "Recommended Long Assets")
+  mutate(Universe = "Recom. Long Assets")
 optimal_long_portfolio_strategies_values <- read.csv("Data/Active_portfolio/Output/optimal_long_portfolio_strategies_values.csv") %>% 
   mutate(Universe = "Long Assets")
 optimal_short_portfolio_strategies_values <- read.csv("Data/Active_portfolio/Output/optimal_short_portfolio_strategies_values.csv") %>%
   mutate(Universe = "Short Assets")
 optimal_chosen_short_assets_portfolio_strategies_values <- read.csv("Data/Active_portfolio/Output/optimal_chosen_short_assets_portfolio_strategies_values.csv") %>%
-  mutate(Universe = "Recommended Short Assets")
+  mutate(Universe = "Recom. Short Assets")
 
 tdf_returns <- read.csv("Data/Active_portfolio/Output/tdf_returns.csv")
 tdf_weights <- read.csv("Data/Active_portfolio/Output/tdf_weights.csv")
@@ -28,10 +28,10 @@ Short_weights <- read.csv("Data/Active_portfolio/Input/portfolio_strategies_shor
   mutate(Universe = "Short Assets")
 
 Chosen_weights <- read.csv("Data/Active_portfolio/Input/portfolio_strategies_chosen_assets.csv") %>%
-  mutate(Universe = "Recommended Long Assets")
+  mutate(Universe = "Recom. Long Assets")
 
 Short_chosen_weights <- read.csv("Data/Active_portfolio/Input/portfolio_strategies_chosen_short_assets.csv") %>%
-  mutate(Universe = "Recommended Short Assets")
+  mutate(Universe = "Recom. Short Assets")
 
 
 All_weights <- rbind(Long_weights, Short_weights, Chosen_weights, Short_chosen_weights)
