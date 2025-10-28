@@ -1,13 +1,12 @@
-
 # Data-files from Python
 optimal_chosen_assets_portfolio_strategies_values <- read.csv("Data/Active_portfolio/Output/optimal_chosen_assets_portfolio_strategies_values.csv") %>%
-  mutate(Universe = "Chosen Long Assets")
+  mutate(Universe = "Recommended Long Assets")
 optimal_long_portfolio_strategies_values <- read.csv("Data/Active_portfolio/Output/optimal_long_portfolio_strategies_values.csv") %>% 
   mutate(Universe = "Long Assets")
 optimal_short_portfolio_strategies_values <- read.csv("Data/Active_portfolio/Output/optimal_short_portfolio_strategies_values.csv") %>%
   mutate(Universe = "Short Assets")
 optimal_chosen_short_assets_portfolio_strategies_values <- read.csv("Data/Active_portfolio/Output/optimal_chosen_short_assets_portfolio_strategies_values.csv") %>%
-  mutate(Universe = "Chosen Short Assets")
+  mutate(Universe = "Recommended Short Assets")
 
 tdf_returns <- read.csv("Data/Active_portfolio/Output/tdf_returns.csv")
 tdf_weights <- read.csv("Data/Active_portfolio/Output/tdf_weights.csv")
@@ -29,10 +28,10 @@ Short_weights <- read.csv("Data/Active_portfolio/Input/portfolio_strategies_shor
   mutate(Universe = "Short Assets")
 
 Chosen_weights <- read.csv("Data/Active_portfolio/Input/portfolio_strategies_chosen_assets.csv") %>%
-  mutate(Universe = "Chosen Assets")
+  mutate(Universe = "Recommended Long Assets")
 
 Short_chosen_weights <- read.csv("Data/Active_portfolio/Input/portfolio_strategies_chosen_short_assets.csv") %>%
-  mutate(Universe = "Chosen Short Assets")
+  mutate(Universe = "Recommended Short Assets")
 
 
 All_weights <- rbind(Long_weights, Short_weights, Chosen_weights, Short_chosen_weights)
@@ -188,8 +187,33 @@ AllStrategies_W_OOS <- All_weights %>% mutate(Portfolio.strategy = factor(plot_p
 saveFig(AllStrategies_W_OOS, "R/Output/AllStrategies_W_OOS.pdf", 11, 6)
 
 
+# Plot of risk adjusted returns OOS
+mean_vol_data_oos <- All_portfolio_strategies_values %>%
+  mutate(Return = Return) %>%
+  group_by(Strategy.ID, Universe) %>%
+  summarise(Mean = mean(Return, na.rm = TRUE),
+            Volatility = sd(Return, na.rm = TRUE)) %>%
+  mutate(Strategy.ID = factor(plot_pf_names(Strategy.ID), levels = pf_levels))
 
 
+Mean_vol_plot_oos <- mean_vol_data_oos %>%
+  ggplot(aes(x = Volatility, y = Mean, color = Strategy.ID, label = Strategy.ID)) +
+  geom_point() + geom_smooth(method = "lm",
+                             formula = y ~ 0 + x,   # force intercept = 0
+                             se = FALSE,
+                             color = "gray77", size = 1) +
+  facet_wrap(~Universe, nrow = 1)+
+  geom_text(vjust = -1, hjust = 0.5, angle = -30, size = 2) + 
+  scale_x_continuous(labels = scales::percent, limits = c(0, 0.065)) +
+  scale_y_continuous(labels = scales::percent, limits = c(0, 0.0125))+
+  labs(title = "Portfolio strategies: Mean vs. Volatility",
+       x = "Volatility",
+       y = "Mean Return",
+       color = "Portfolio Strategy") +
+  US_EU_PF_colors + theme_bw()
+
+
+saveFig(Mean_vol_plot_oos, "R/Output/Mean_vol_plot_oos.pdf", width = 10, height = 4)
 
 
 #SPOT RATES

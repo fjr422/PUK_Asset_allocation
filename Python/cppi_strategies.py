@@ -19,9 +19,12 @@ short_values = pl.read_csv(portfolio_analysis_paths.optimal_short_portfolio_stra
 chosen_assets_values = pl.read_csv(portfolio_analysis_paths.optimal_chosen_assets_portfolio_strategies_returns_path).with_columns(
     pl.lit("Chosen assets").alias("Universe")
 )
+chosen_short_values = pl.read_csv(portfolio_analysis_paths.optimal_chosen_short_assets_portfolio_strategies_returns_path).with_columns(
+    pl.lit("Chosen short assets").alias("Universe")
+)
 
-all_values = pl.concat([long_values, short_values, chosen_assets_values])
-#px.line(all_values, x = "TIME_PERIOD", y = "Value", color = "Strategy ID", facet_col = "Universe", title="Values").show()
+all_values = pl.concat([long_values, short_values, chosen_assets_values, chosen_short_values])
+px.line(all_values, x = "TIME_PERIOD", y = "Value", color = "Strategy ID", facet_col = "Universe", title="Values").show()
 
 long_weights = pl.read_csv(portfolio_analysis_paths.optimal_portfolio_strategies_long).with_columns(
     pl.lit("Long assets").alias("Universe")
@@ -32,12 +35,15 @@ short_weights = pl.read_csv(portfolio_analysis_paths.optimal_portfolio_strategie
 chosen_weights = pl.read_csv(portfolio_analysis_paths.optimal_portfolio_strategies_chosen_assets).with_columns(
     pl.lit("Chosen assets").alias("Universe")
 )
+chosen_short_weights = pl.read_csv(portfolio_analysis_paths.optimal_portfolio_strategies_chosen_short_assets).with_columns(
+    pl.lit("Chosen short assets").alias("Universe")
+)
 
-all_weights = pl.concat([long_weights, short_weights, chosen_weights]).filter(
+all_weights = pl.concat([long_weights, short_weights, chosen_weights, chosen_short_weights]).filter(
     pl.col("Portfolio strategy").is_in([PortFolioRegion.RP.value, PortFolioRegion.GlobalMV.value, PortFolioRegion.Sharpe.value, PortFolioRegion.MaxReturn.value])
 )
 
-# px.line(all_weights, x = "TIME_PERIOD", y = "Weight", color = "Portfolio", facet_col = "Universe", facet_row="Portfolio strategy", title="Weights").show()
+px.line(all_weights, x = "TIME_PERIOD", y = "Weight", color = "Portfolio", facet_col = "Universe", facet_row="Portfolio strategy", title="Weights").show()
 
 # Strategies and fund performance
 def get_sharpe(df: pl.DataFrame):
